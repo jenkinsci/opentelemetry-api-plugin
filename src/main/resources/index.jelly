@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright The Original Author or Authors
+  ~ SPDX-License-Identifier: Apache-2.0
+  -->
+<?jelly escape-by-default='true'?>
+<div>
+    This plugin is a shared library. It provides the OpenTelemetry API jar so that other plugins can consume OpenTelemetry without duplication and without classpath collisions.
+</div>

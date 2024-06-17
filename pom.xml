@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright The Original Author or Authors
+  ~ SPDX-License-Identifier: Apache-2.0
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>plugin</artifactId>
+        <version>4.83</version>
+        <relativePath />
+    </parent>
+
+    <groupId>io.jenkins.plugins</groupId>
+    <artifactId>opentelemetry-api</artifactId>
+    <version>${revision}.${changelist}</version>
+    <packaging>hpi</packaging>
+
+    <name>OpenTelemetry API Plugin</name>
+    <url>https://github.com/jenkinsci/opentelemetry-api-plugin</url>
+
+    <properties>
+        <opentelemetry.version>1.39.0</opentelemetry.version>
+        <opentelemetry-alpha.version>1.39.0-alpha</opentelemetry-alpha.version>
+        <opentelemetry-instrumentation-alpha.version>2.4.0-alpha</opentelemetry-instrumentation-alpha.version>
+        <opentelemetry-contrib.version>1.36.0-alpha</opentelemetry-contrib.version>
+        <opentelemetry-semconv>1.25.0-alpha</opentelemetry-semconv>
+
+        <jenkins.version>2.401.3</jenkins.version>
+
+        <changelist>999999-SNAPSHOT</changelist>
+        <gitHubRepo>jenkinsci/opentelemetry-api-plugin</gitHubRepo>
+        <revision>${opentelemetry.version}</revision>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api-incubator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-context</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry.semconv</groupId>
+            <artifactId>opentelemetry-semconv</artifactId>
+            <version>${opentelemetry-semconv}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry.semconv</groupId>
+            <artifactId>opentelemetry-semconv-incubating</artifactId>
+            <version>${opentelemetry-semconv}</version>
+        </dependency>
+    </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.jenkins.tools.bom</groupId>
+                <artifactId>bom-2.401.x</artifactId>
+                <version>2745.vc7b_fe4c876fa_</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom</artifactId>
+                <version>${opentelemetry.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom-alpha</artifactId>
+                <version>${opentelemetry-alpha.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <scm child.scm.connection.inherit.append.path="false" child.scm.developerConnection.inherit.append.path="false" child.scm.url.inherit.append.path="false">
+        <connection>scm:git:https://github.com/${gitHubRepo}</connection>
+        <developerConnection>scm:git:https://github.com/${gitHubRepo}</developerConnection>
+        <tag>${scmTag}</tag>
+        <url>https://github.com/${gitHubRepo}</url>
+    </scm>
+
+    <repositories>
+        <repository>
+            <id>repo.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/public/</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repo.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          </license>
+    </licenses>
+</project>
