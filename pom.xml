@@ -15,13 +15,15 @@
 
     <groupId>io.jenkins.plugins</groupId>
     <artifactId>opentelemetry-api</artifactId>
-    <version>${revision}.${changelist}</version>
+    <version>${revision}-${changelist}</version>
     <packaging>hpi</packaging>
 
     <name>OpenTelemetry API Plugin</name>
     <url>https://github.com/jenkinsci/opentelemetry-api-plugin</url>
 
     <properties>
+        <changelist>999999-SNAPSHOT</changelist>
+        <gitHubRepo>jenkinsci/opentelemetry-api-plugin</gitHubRepo>
         <opentelemetry.version>1.39.0</opentelemetry.version>
         <opentelemetry-alpha.version>1.39.0-alpha</opentelemetry-alpha.version>
         <opentelemetry-instrumentation-alpha.version>2.4.0-alpha</opentelemetry-instrumentation-alpha.version>
