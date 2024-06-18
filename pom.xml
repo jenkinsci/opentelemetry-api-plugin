@@ -28,7 +28,7 @@
         <opentelemetry-instrumentation.version>2.5.0</opentelemetry-instrumentation.version>
         <opentelemetry-semconv>1.25.0-alpha</opentelemetry-semconv>
 
-        <jenkins.version>2.440.3</jenkins.version>
+        <jenkins.version>2.414.3</jenkins.version>
 
         <changelist>999999-SNAPSHOT</changelist>
         <gitHubRepo>jenkinsci/opentelemetry-api-plugin</gitHubRepo>
@@ -67,8 +67,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.440.x</artifactId>
-                <version>3120.v4d898e1e9fc4</version>
+                <artifactId>bom-2.414.x</artifactId>
+                <version>2907.vcb_35d6f2f7de</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
