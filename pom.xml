@@ -25,8 +25,7 @@
         <changelist>999999-SNAPSHOT</changelist>
         <gitHubRepo>jenkinsci/opentelemetry-api-plugin</gitHubRepo>
         <opentelemetry.version>1.39.0</opentelemetry.version>
-        <opentelemetry-alpha.version>1.39.0-alpha</opentelemetry-alpha.version>
-        <opentelemetry-instrumentation-alpha.version>2.4.0-alpha</opentelemetry-instrumentation-alpha.version>
+        <opentelemetry-instrumentation.version>2.5.0</opentelemetry-instrumentation.version>
         <opentelemetry-semconv>1.25.0-alpha</opentelemetry-semconv>
 
         <jenkins.version>2.440.3</jenkins.version>
@@ -58,6 +57,10 @@
             <artifactId>opentelemetry-semconv-incubating</artifactId>
             <version>${opentelemetry-semconv}</version>
         </dependency>
+        <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-instrumentation-api</artifactId>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
@@ -82,6 +85,20 @@
                 <version>${opentelemetry.version}-alpha</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.opentelemetry.instrumentation</groupId>
+                <artifactId>opentelemetry-instrumentation-bom</artifactId>
+                <version>${opentelemetry-instrumentation.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>io.opentelemetry.instrumentation</groupId>
+                <artifactId>opentelemetry-instrumentation-bom-alpha</artifactId>
+                <version>${opentelemetry-instrumentation.version}-alpha</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
         </dependencies>
     </dependencyManagement>
