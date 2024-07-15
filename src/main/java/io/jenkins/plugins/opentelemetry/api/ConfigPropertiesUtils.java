@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package io.jenkins.plugins.opentelemetry.api.util;
+package io.jenkins.plugins.opentelemetry.api;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.opentelemetry.api.common.AttributeKey;
@@ -21,22 +21,25 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class ConfigPropertiesUtils {
+/**
+ * Utility methods for working with {@link ConfigProperties}.
+ */
+class ConfigPropertiesUtils {
 
     /**
-     * Helper because there is no public implementation of the "i.o.s.a.s.ConfigProperties" interface.
+     * Helper because there is no implementation of the "i.o.s.a.s.ConfigProperties" interface.
      */
-    public static ConfigProperties emptyConfig(){
+    static ConfigProperties emptyConfig(){
         return DefaultConfigProperties.createFromMap(Collections.emptyMap());
     }
 
-    public static String prettyPrintOtelSdkConfig(ConfigProperties configProperties, Resource resource) {
+    static String prettyPrintOtelSdkConfig(ConfigProperties configProperties, Resource resource) {
         return "SDK [" +
                 "config: " + prettyPrintConfiguration(configProperties) + ", "+
                 "resource: " + prettyPrintResource(resource) +
                 "]";
     }
-    public static String prettyPrintConfiguration(ConfigProperties config) {
+    static String prettyPrintConfiguration(ConfigProperties config) {
         Map<String, String> message = new LinkedHashMap<>();
         for (String attributeName : noteworthyConfigurationPropertyNames) {
             final String attributeValue = config.getString(attributeName);
@@ -46,12 +49,12 @@ public class ConfigPropertiesUtils {
         }
         return message.entrySet().stream().map(entry -> entry.getKey() + "=" + entry.getValue()).collect(Collectors.joining(", "));
     }
-    public static String prettyPrintResource(@Nullable Resource resource) {
+    static String prettyPrintResource(@Nullable Resource resource) {
         if (resource == null) {
             return "#null#";
         }
         Map<String, String> message = new LinkedHashMap<>();
-        for (AttributeKey attributeKey : noteworthyResourceAttributeKeys) {
+        for (AttributeKey<?> attributeKey : noteworthyResourceAttributeKeys) {
             Object attributeValue = resource.getAttribute(attributeKey);
             if (attributeValue != null) {
                 message.put(attributeKey.getKey(), Objects.toString(attributeValue, "#null#"));
@@ -65,7 +68,7 @@ public class ConfigPropertiesUtils {
             "otel.exporter.otlp.endpoint"  , "otel.exporter.otlp.traces.endpoint", "otel.exporter.otlp.metrics.endpoint",
             "otel.exporter.jaeger.endpoint", "otel.exporter.prometheus.port");
 
-    private final static List<AttributeKey> noteworthyResourceAttributeKeys = Arrays.asList(
+    private final static List<AttributeKey<?>> noteworthyResourceAttributeKeys = Arrays.asList(
             ServiceAttributes.SERVICE_NAME, ServiceIncubatingAttributes.SERVICE_NAMESPACE, ServiceAttributes.SERVICE_VERSION
     ) ;
 

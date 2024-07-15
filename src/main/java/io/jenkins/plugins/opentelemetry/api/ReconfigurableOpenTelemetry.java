@@ -12,7 +12,6 @@ import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 import hudson.init.InitMilestone;
 import hudson.init.Initializer;
-import io.jenkins.plugins.opentelemetry.api.util.ConfigPropertiesUtils;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.incubator.events.EventLogger;
