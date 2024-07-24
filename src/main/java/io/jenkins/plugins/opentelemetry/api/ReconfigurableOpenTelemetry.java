@@ -28,6 +28,7 @@ import io.opentelemetry.api.trace.TracerProvider;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
+import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdkBuilder;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.logs.internal.SdkEventLoggerProvider;
@@ -91,7 +92,14 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
         logger.log(Level.INFO, "OpenTelemetry initialized as NoOp");
     }
 
+    @Deprecated
+    @Override
     public void configure(@NonNull Map<String, String> openTelemetryProperties, Resource openTelemetryResource) {
+        configure(openTelemetryProperties, openTelemetryResource, true);
+    }
+
+    @Override
+    public void configure(@NonNull Map<String, String> openTelemetryProperties, Resource openTelemetryResource, boolean disableShutdownHook) {
 
         if (openTelemetryProperties.containsKey("otel.exporter.otlp.endpoint") ||
                 openTelemetryProperties.containsKey("otel.traces.exporter") ||
@@ -101,7 +109,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             logger.log(Level.FINE, "initializeOtlp");
 
             // OPENTELEMETRY SDK
-            OpenTelemetrySdk openTelemetrySdk = AutoConfiguredOpenTelemetrySdk
+            AutoConfiguredOpenTelemetrySdkBuilder autoConfiguredOpenTelemetrySdkBuilder = AutoConfiguredOpenTelemetrySdk
                     .builder()
                     // properties
                     .addPropertiesSupplier(() -> openTelemetryProperties)
@@ -118,12 +126,13 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                                         .putAll(openTelemetryResource).build();
                                 return this.resource;
                             }
-                    )
-                    // disable shutdown hook, SDK closed by #close()
-                    .disableShutdownHook()
+                    );
+            if (disableShutdownHook) {
+                autoConfiguredOpenTelemetrySdkBuilder.disableShutdownHook();
+            }
+            OpenTelemetrySdk openTelemetrySdk = autoConfiguredOpenTelemetrySdkBuilder
                     .build()
                     .getOpenTelemetrySdk();
-
             setOpenTelemetryImpl(openTelemetrySdk);
 
             logger.log(Level.INFO, () -> "OpenTelemetry initialized: " + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
