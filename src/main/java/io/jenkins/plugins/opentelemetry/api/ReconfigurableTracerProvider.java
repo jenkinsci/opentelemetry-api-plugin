@@ -6,6 +6,7 @@
 package io.jenkins.plugins.opentelemetry.api;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.opentelemetry.api.incubator.trace.ExtendedTracer;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.TracerBuilder;
@@ -16,6 +17,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * <p>
@@ -28,6 +31,8 @@ import java.util.concurrent.ConcurrentMap;
  * </p>
  */
 class ReconfigurableTracerProvider implements TracerProvider {
+
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     private TracerProvider delegate;
 
@@ -42,48 +47,75 @@ class ReconfigurableTracerProvider implements TracerProvider {
     }
 
     @Override
-    public synchronized Tracer get(String instrumentationScopeName) {
-        return tracers.computeIfAbsent(
-            new InstrumentationScope(instrumentationScopeName),
-            instrumentationScope -> new ReconfigurableTracer(delegate.get(instrumentationScope.instrumentationScopeName)));
+    public Tracer get(String instrumentationScopeName) {
+        lock.readLock().lock();
+        try {
+            return tracers.computeIfAbsent(
+                    new InstrumentationScope(instrumentationScopeName),
+                    instrumentationScope -> new ReconfigurableTracer(delegate.get(instrumentationScope.instrumentationScopeName), lock));
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
-    public synchronized void setDelegate(TracerProvider delegate) {
-        this.delegate = delegate;
-        tracers.forEach((instrumentationScope, reconfigurableTracer) -> {
-            TracerBuilder tracerBuilder = delegate.tracerBuilder(instrumentationScope.instrumentationScopeName);
-            Optional.ofNullable(instrumentationScope.instrumentationScopeVersion).ifPresent(tracerBuilder::setInstrumentationVersion);
-            Optional.ofNullable(instrumentationScope.schemaUrl).ifPresent(tracerBuilder::setSchemaUrl);
-            reconfigurableTracer.setDelegate(tracerBuilder.build());
-        });
+    public void setDelegate(TracerProvider delegate) {
+        lock.writeLock().lock();
+        try {
+            this.delegate = delegate;
+            tracers.forEach((instrumentationScope, reconfigurableTracer) -> {
+                TracerBuilder tracerBuilder = delegate.tracerBuilder(instrumentationScope.instrumentationScopeName);
+                Optional.ofNullable(instrumentationScope.instrumentationScopeVersion).ifPresent(tracerBuilder::setInstrumentationVersion);
+                Optional.ofNullable(instrumentationScope.schemaUrl).ifPresent(tracerBuilder::setSchemaUrl);
+                reconfigurableTracer.setDelegate(tracerBuilder.build());
+            });
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     @Override
     public Tracer get(String instrumentationScopeName, String instrumentationScopeVersion) {
-        return tracers.computeIfAbsent(
-            new InstrumentationScope(instrumentationScopeName, null, instrumentationScopeVersion),
-            instrumentationScope -> new ReconfigurableTracer(delegate.get(instrumentationScopeName, instrumentationScopeVersion)));
+        lock.readLock().lock();
+        try {
+            return tracers.computeIfAbsent(
+                    new InstrumentationScope(instrumentationScopeName, null, instrumentationScopeVersion),
+                    instrumentationScope -> new ReconfigurableTracer(delegate.get(instrumentationScopeName, instrumentationScopeVersion), lock));
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     @Override
     public TracerBuilder tracerBuilder(String instrumentationScopeName) {
-        return new ReconfigurableTracerBuilder(delegate.tracerBuilder(instrumentationScopeName), instrumentationScopeName);
+        lock.readLock().lock();
+        try {
+            return new ReconfigurableTracerBuilder(delegate.tracerBuilder(instrumentationScopeName), instrumentationScopeName, lock);
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
-    public synchronized TracerProvider getDelegate() {
-        return delegate;
+    public TracerProvider getDelegate() {
+        lock.readLock().lock();
+        try {
+            return delegate;
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     @VisibleForTesting
     protected class ReconfigurableTracerBuilder implements TracerBuilder {
-        TracerBuilder delegate;
-        String instrumentationScopeName;
+        final TracerBuilder delegate;
+        final String instrumentationScopeName;
         String schemaUrl;
         String instrumentationScopeVersion;
+        final ReadWriteLock lock;
 
-        public ReconfigurableTracerBuilder(TracerBuilder delegate, String instrumentationScopeName) {
+        public ReconfigurableTracerBuilder(TracerBuilder delegate, String instrumentationScopeName, ReadWriteLock lock) {
             this.delegate = Objects.requireNonNull(delegate);
             this.instrumentationScopeName = Objects.requireNonNull(instrumentationScopeName);
+            this.lock = lock;
         }
 
         @Override
@@ -101,31 +133,69 @@ class ReconfigurableTracerProvider implements TracerProvider {
         }
 
         @Override
-        public Tracer build() {
-            InstrumentationScope instrumentationScope = new InstrumentationScope(instrumentationScopeName, schemaUrl, instrumentationScopeVersion);
-            return tracers.computeIfAbsent(instrumentationScope, k -> new ReconfigurableTracer(delegate.build()));
+        public ExtendedTracer build() {
+            lock.readLock().lock();
+            try {
+                InstrumentationScope instrumentationScope = new InstrumentationScope(instrumentationScopeName, schemaUrl, instrumentationScopeVersion);
+                return tracers.computeIfAbsent(instrumentationScope, k -> new ReconfigurableTracer(delegate.build(), lock));
+            } finally {
+                lock.readLock().unlock();
+            }
         }
     }
 
     @VisibleForTesting
-    protected static class ReconfigurableTracer implements Tracer {
+    protected static class ReconfigurableTracer implements ExtendedTracer {
+        final ReadWriteLock lock;
+
         Tracer delegate;
 
-        public ReconfigurableTracer(Tracer delegate) {
+        public ReconfigurableTracer(Tracer delegate, ReadWriteLock lock) {
+            this.lock = lock;
             this.delegate = delegate;
         }
 
         @Override
-        public synchronized SpanBuilder spanBuilder(@Nonnull String spanName) {
-            return delegate.spanBuilder(spanName);
+        public SpanBuilder spanBuilder(@Nonnull String spanName) {
+            lock.readLock().lock();
+            try {
+                return delegate.spanBuilder(spanName);
+            } finally {
+                lock.readLock().unlock();
+            }
         }
 
-        public synchronized void setDelegate(Tracer delegate) {
-            this.delegate = delegate;
+        public void setDelegate(Tracer delegate) {
+            lock.writeLock().lock();
+            try {
+                this.delegate = delegate;
+            } finally {
+                lock.writeLock().unlock();
+            }
         }
 
-        public synchronized Tracer getDelegate() {
-            return delegate;
+        public Tracer getDelegate() {
+            lock.readLock().lock();
+            try {
+                return delegate;
+            } finally {
+                lock.readLock().unlock();
+            }
+        }
+
+        @Override
+        public boolean isEnabled() {
+            lock.readLock().lock();
+            try {
+                if (delegate instanceof ExtendedTracer) {
+                    return ((ExtendedTracer) delegate).isEnabled();
+                } else {
+                    // It's the NO OP impl
+                    return false;
+                }
+            } finally {
+                lock.readLock().unlock();
+            }
         }
     }
 

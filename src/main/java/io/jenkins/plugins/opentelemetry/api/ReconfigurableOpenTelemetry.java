@@ -88,7 +88,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
 
     @Initializer(after = InitMilestone.EXTENSIONS_AUGMENTED, before = InitMilestone.SYSTEM_CONFIG_LOADED)
     public void init() {
-        logger.log(Level.INFO, "OpenTelemetry initialized as NoOp");
+        logger.log(Level.INFO, "OpenTelemetry configured as NoOp");
     }
 
     public void configure(@NonNull Map<String, String> openTelemetryProperties, Resource openTelemetryResource) {
@@ -98,7 +98,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                 openTelemetryProperties.containsKey("otel.metrics.exporter") ||
                 openTelemetryProperties.containsKey("otel.logs.exporter")) {
 
-            logger.log(Level.FINE, "initializeOtlp");
+            logger.log(Level.FINE, "configure...");
 
             // OPENTELEMETRY SDK
             OpenTelemetrySdk openTelemetrySdk = AutoConfiguredOpenTelemetrySdk
@@ -126,7 +126,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
 
             setOpenTelemetryImpl(openTelemetrySdk);
 
-            logger.log(Level.INFO, () -> "OpenTelemetry initialized: " + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
+            logger.log(Level.INFO, () -> "OpenTelemetry SDK configured: " + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
 
         } else { // NO-OP
 
@@ -134,7 +134,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             this.config = ConfigPropertiesUtils.emptyConfig();
             setOpenTelemetryImpl(OpenTelemetry.noop());
 
-            logger.log(Level.INFO, "OpenTelemetry initialized as NoOp");
+            logger.log(Level.INFO, "OpenTelemetry configured as NoOp");
         }
 
         postOpenTelemetrySdkConfiguration();

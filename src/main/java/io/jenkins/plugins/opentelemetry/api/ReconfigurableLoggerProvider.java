@@ -6,6 +6,7 @@
 package io.jenkins.plugins.opentelemetry.api;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.opentelemetry.api.incubator.logs.ExtendedLogger;
 import io.opentelemetry.api.logs.LogRecordBuilder;
 import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.logs.LoggerBuilder;
@@ -15,6 +16,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * <p>
@@ -27,6 +30,9 @@ import java.util.concurrent.ConcurrentMap;
  * </p>
  */
 class ReconfigurableLoggerProvider implements LoggerProvider {
+
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
     private LoggerProvider delegate;
 
     private final ConcurrentMap<InstrumentationScope, ReconfigurableLogger> loggers = new ConcurrentHashMap<>();
@@ -41,35 +47,52 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
 
     @Override
     public LoggerBuilder loggerBuilder(String instrumentationScopeName) {
-        return new ReconfigurableLoggerBuilder(delegate.loggerBuilder(instrumentationScopeName), instrumentationScopeName);
+        lock.readLock().lock();
+        try {
+            return new ReconfigurableLoggerBuilder(delegate.loggerBuilder(instrumentationScopeName), instrumentationScopeName, lock);
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     @Override
     public Logger get(String instrumentationScopeName) {
-        InstrumentationScope instrumentationScope = new InstrumentationScope(instrumentationScopeName);
-        return loggers.computeIfAbsent(instrumentationScope, scope -> new ReconfigurableLogger(delegate.get(instrumentationScopeName)));
+        lock.readLock().lock();
+        try {
+            InstrumentationScope instrumentationScope = new InstrumentationScope(instrumentationScopeName);
+            return loggers.computeIfAbsent(instrumentationScope, scope -> new ReconfigurableLogger(delegate.get(instrumentationScopeName), lock));
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     public void setDelegate(LoggerProvider delegate) {
-        this.delegate = delegate;
-        loggers.forEach((instrumentationScope, reconfigurableTracer) -> {
-            LoggerBuilder loggerBuilder = delegate.loggerBuilder(instrumentationScope.instrumentationScopeName);
-            Optional.ofNullable(instrumentationScope.instrumentationScopeVersion).ifPresent(loggerBuilder::setInstrumentationVersion);
-            Optional.ofNullable(instrumentationScope.schemaUrl).ifPresent(loggerBuilder::setSchemaUrl);
-            reconfigurableTracer.setDelegate(loggerBuilder.build());
-        });
+        lock.writeLock().lock();
+        try {
+            this.delegate = delegate;
+            loggers.forEach((instrumentationScope, reconfigurableTracer) -> {
+                LoggerBuilder loggerBuilder = delegate.loggerBuilder(instrumentationScope.instrumentationScopeName);
+                Optional.ofNullable(instrumentationScope.instrumentationScopeVersion).ifPresent(loggerBuilder::setInstrumentationVersion);
+                Optional.ofNullable(instrumentationScope.schemaUrl).ifPresent(loggerBuilder::setSchemaUrl);
+                reconfigurableTracer.setDelegate(loggerBuilder.build());
+            });
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     @VisibleForTesting
     protected class ReconfigurableLoggerBuilder implements LoggerBuilder {
-        LoggerBuilder delegate;
-        String instrumentationScopeName;
+        final LoggerBuilder delegate;
+        final String instrumentationScopeName;
         String schemaUrl;
         String instrumentationScopeVersion;
+        final ReadWriteLock lock;
 
-        public ReconfigurableLoggerBuilder(LoggerBuilder delegate, String instrumentationScopeName) {
+        public ReconfigurableLoggerBuilder(LoggerBuilder delegate, String instrumentationScopeName, ReadWriteLock lock) {
             this.delegate = Objects.requireNonNull(delegate);
             this.instrumentationScopeName = Objects.requireNonNull(instrumentationScopeName);
+            this.lock = lock;
         }
 
         @Override
@@ -89,25 +112,52 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
         @Override
         public Logger build() {
             InstrumentationScope instrumentationScope = new InstrumentationScope(instrumentationScopeName, schemaUrl, instrumentationScopeVersion);
-            return loggers.computeIfAbsent(instrumentationScope, scope -> new ReconfigurableLogger(delegate.build()));
+            return loggers.computeIfAbsent(instrumentationScope, scope -> new ReconfigurableLogger(delegate.build(), lock));
         }
     }
 
     @VisibleForTesting
-    protected static class ReconfigurableLogger implements Logger {
+    protected static class ReconfigurableLogger implements ExtendedLogger {
+        ReadWriteLock lock;
         Logger delegate;
 
-        public ReconfigurableLogger(Logger delegate) {
+        public ReconfigurableLogger(Logger delegate, ReadWriteLock lock) {
             this.delegate = delegate;
+            this.lock = lock;
         }
 
         @Override
-        public synchronized LogRecordBuilder logRecordBuilder() {
-            return delegate.logRecordBuilder();
+        public LogRecordBuilder logRecordBuilder() {
+            lock.readLock().lock();
+            try {
+                return delegate.logRecordBuilder();
+            } finally {
+                lock.readLock().unlock();
+            }
         }
 
-        public synchronized void setDelegate(Logger delegate) {
-            this.delegate = delegate;
+        public void setDelegate(Logger delegate) {
+            lock.writeLock().lock();
+            try {
+                this.delegate = delegate;
+            } finally {
+                lock.writeLock().unlock();
+            }
+        }
+
+        @Override
+        public boolean isEnabled() {
+            lock.readLock().lock();
+            try {
+                if (delegate instanceof ExtendedLogger) {
+                    return ((ExtendedLogger) delegate).isEnabled();
+                } else {
+                    // It's the NO OP impl
+                    return false;
+                }
+            } finally {
+                lock.readLock().unlock();
+            }
         }
     }
 }

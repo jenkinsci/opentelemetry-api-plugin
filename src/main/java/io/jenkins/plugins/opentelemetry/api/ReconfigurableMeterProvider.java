@@ -8,7 +8,9 @@ package io.jenkins.plugins.opentelemetry.api;
 import com.google.common.annotations.VisibleForTesting;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.incubator.metrics.ExtendedDoubleCounter;
 import io.opentelemetry.api.incubator.metrics.ExtendedDoubleHistogramBuilder;
+import io.opentelemetry.api.incubator.metrics.ExtendedLongCounter;
 import io.opentelemetry.api.incubator.metrics.ExtendedLongHistogramBuilder;
 import io.opentelemetry.api.metrics.BatchCallback;
 import io.opentelemetry.api.metrics.DoubleCounter;
@@ -784,7 +786,7 @@ class ReconfigurableMeterProvider implements MeterProvider {
 
     @VisibleForTesting
     @ThreadSafe
-    protected static class ReconfigurableLongCounter implements LongCounter {
+    protected static class ReconfigurableLongCounter implements ExtendedLongCounter {
         final ReadWriteLock lock;
         @GuardedBy("lock")
         private LongCounter delegate;
@@ -837,6 +839,21 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 return delegate;
+            } finally {
+                lock.readLock().unlock();
+            }
+        }
+
+        @Override
+        public boolean isEnabled() {
+            lock.readLock().lock();
+            try {
+                if (delegate instanceof ExtendedLongCounter) {
+                    return ((ExtendedLongCounter) delegate).isEnabled();
+                } else {
+                    // It's the NO OP impl
+                    return false;
+                }
             } finally {
                 lock.readLock().unlock();
             }
@@ -995,7 +1012,7 @@ class ReconfigurableMeterProvider implements MeterProvider {
 
     @VisibleForTesting
     @ThreadSafe
-    protected static class ReconfigurableDoubleCounter implements DoubleCounter {
+    protected static class ReconfigurableDoubleCounter implements ExtendedDoubleCounter {
         final ReadWriteLock lock;
         @GuardedBy("lock")
         private DoubleCounter delegate;
@@ -1048,6 +1065,21 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 return delegate;
+            } finally {
+                lock.readLock().unlock();
+            }
+        }
+
+        @Override
+        public boolean isEnabled() {
+            lock.readLock().lock();
+            try {
+                if (delegate instanceof ExtendedDoubleCounter) {
+                    return ((ExtendedDoubleCounter) delegate).isEnabled();
+                } else {
+                    // It's the NO OP impl
+                    return false;
+                }
             } finally {
                 lock.readLock().unlock();
             }
