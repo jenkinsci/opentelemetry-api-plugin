@@ -9,7 +9,7 @@ import org.junit.Test;
 public class ApacheHttpClientInstrumentationTest {
 
     @Test
-    public void test() {
+    public void test_instantiate_instrumented_http_client() {
         ReconfigurableOpenTelemetry openTelemetry = new ReconfigurableOpenTelemetry();
         HttpClientBuilder httpClientBuilder = ApacheHttpClientTelemetry.create(openTelemetry).newHttpClientBuilder();
         CloseableHttpClient httpClient = httpClientBuilder.build();
