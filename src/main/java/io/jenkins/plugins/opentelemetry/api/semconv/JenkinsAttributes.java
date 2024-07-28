@@ -12,7 +12,7 @@ import jenkins.model.Jenkins;
  * @see io.opentelemetry.api.common.Attributes
  * @see io.opentelemetry.semconv.ServiceAttributes
  */
-public final class JenkinsAttributes {
+public class JenkinsAttributes {
 
     /**
      * @see Jenkins#getRootUrl()
