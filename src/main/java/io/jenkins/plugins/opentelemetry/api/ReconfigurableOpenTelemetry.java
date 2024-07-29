@@ -92,6 +92,9 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
         logger.log(Level.INFO, "OpenTelemetry initialized as NoOp");
     }
 
+    /**
+     * Configure the OpenTelemetry SDK with the given properties and resource disabling the OTel SDK shutdown hook
+     */
     @Deprecated
     @Override
     public void configure(@NonNull Map<String, String> openTelemetryProperties, Resource openTelemetryResource) {
