@@ -110,7 +110,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                 openTelemetryProperties.containsKey("otel.metrics.exporter") ||
                 openTelemetryProperties.containsKey("otel.logs.exporter")) {
 
-            logger.log(Level.FINE, "initializeOtlp");
+            logger.log(Level.FINE, "configure...");
 
             // OPENTELEMETRY SDK
             OpenTelemetrySdk openTelemetrySdk = AutoConfiguredOpenTelemetrySdk
@@ -136,7 +136,9 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                     .getOpenTelemetrySdk();
             setOpenTelemetryImpl(openTelemetrySdk);
 
-            if (disableShutdownHook) {
+            logger.log(Level.INFO, () -> "OpenTelemetry SDK configured: " + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
+
+          if (disableShutdownHook) {
                 if (shutdownHook == null) {
                     // nothing to do, no shutdownhook registered
                 } else {
@@ -151,15 +153,13 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                 }
             }
 
-            logger.log(Level.INFO, () -> "OpenTelemetry initialized: " + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
-
         } else { // NO-OP
 
             this.resource = Resource.empty();
             this.config = ConfigPropertiesUtils.emptyConfig();
             setOpenTelemetryImpl(OpenTelemetry.noop());
 
-            logger.log(Level.INFO, "OpenTelemetry initialized as NoOp");
+            logger.log(Level.INFO, "OpenTelemetry configured as NoOp");
         }
 
         postOpenTelemetrySdkConfiguration();
