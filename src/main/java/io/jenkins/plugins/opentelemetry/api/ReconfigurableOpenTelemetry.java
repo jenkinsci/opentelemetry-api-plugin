@@ -28,6 +28,7 @@ import io.opentelemetry.api.trace.TracerProvider;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
+import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdkBuilder;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.logs.internal.SdkEventLoggerProvider;
@@ -61,6 +62,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
     Resource resource = Resource.empty();
     ConfigProperties config = ConfigPropertiesUtils.emptyConfig();
     OpenTelemetry openTelemetryImpl = OpenTelemetry.noop();
+    Thread shutdownHook;
     final ReconfigurableMeterProvider meterProviderImpl = new ReconfigurableMeterProvider();
     final ReconfigurableTracerProvider traceProviderImpl = new ReconfigurableTracerProvider();
     final ReconfigurableLoggerProvider loggerProviderImpl = new ReconfigurableLoggerProvider();
@@ -81,7 +83,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             logger.log(Level.WARNING, "GlobalEventLoggerProvider already set", e);
         }
 
-        logger.log(Level.FINE, () -> "Initialize " +
+        logger.log(Level.FINE, () -> "Configure " +
                 "GlobalOpenTelemetry with instance " + Optional.of(GlobalOpenTelemetry.get()).map(ot -> ot + "@" + System.identityHashCode(ot)) + "and " +
                 "GlobalEventLoggerProvide with instance " + Optional.of(GlobalEventLoggerProvider.get()).map(elp -> elp + "@" + System.identityHashCode(elp)));
     }
@@ -91,7 +93,17 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
         logger.log(Level.INFO, "OpenTelemetry configured as NoOp");
     }
 
+    /**
+     * Configure the OpenTelemetry SDK with the given properties and resource disabling the OTel SDK shutdown hook
+     */
+    @Deprecated
+    @Override
     public void configure(@NonNull Map<String, String> openTelemetryProperties, Resource openTelemetryResource) {
+        configure(openTelemetryProperties, openTelemetryResource, true);
+    }
+
+    @Override
+    public void configure(@NonNull Map<String, String> openTelemetryProperties, Resource openTelemetryResource, boolean disableShutdownHook) {
 
         if (openTelemetryProperties.containsKey("otel.exporter.otlp.endpoint") ||
                 openTelemetryProperties.containsKey("otel.traces.exporter") ||
@@ -119,14 +131,27 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                                 return this.resource;
                             }
                     )
-                    // disable shutdown hook, SDK closed by #close()
                     .disableShutdownHook()
                     .build()
                     .getOpenTelemetrySdk();
-
             setOpenTelemetryImpl(openTelemetrySdk);
 
             logger.log(Level.INFO, () -> "OpenTelemetry SDK configured: " + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
+
+          if (disableShutdownHook) {
+                if (shutdownHook == null) {
+                    // nothing to do, no shutdownhook registered
+                } else {
+                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                }
+            } else {
+                if (shutdownHook == null) {
+                    shutdownHook = new Thread(this::close);
+                    Runtime.getRuntime().addShutdownHook(shutdownHook);
+                } else {
+                    // nothing to do, shutdown hook already registered
+                }
+            }
 
         } else { // NO-OP
 
@@ -250,5 +275,19 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             logger.log(Level.FINE, () -> "Notify " + openTelemetryLifecycleListener + " after OpenTelemetry configuration");
             openTelemetryLifecycleListener.afterConfiguration(this.config);
         });
+    }
+
+    static class ShutdownHook extends Thread {
+        final OpenTelemetrySdk openTelemetrySdk;
+
+        public ShutdownHook(OpenTelemetrySdk openTelemetrySdk) {
+            super("OpenTelemetry SDK Shutdown Hook");
+            this.openTelemetrySdk = openTelemetrySdk;
+        }
+
+        @Override
+        public void run() {
+            openTelemetrySdk.close();
+        }
     }
 }

@@ -15,7 +15,14 @@ public interface ExtendedOpenTelemetry extends ExtensionPoint, OpenTelemetry {
     EventLoggerBuilder eventLoggerBuilder(String instrumentationScopeName);
     ConfigProperties getConfig();
     Resource getResource();
+
+    /**
+     * 
+     * @deprecated use {@link #configure(Map, Resource, boolean)}
+     */
+    @Deprecated
     void configure(@NonNull Map<String, String> openTelemetryProperties, Resource openTelemetryResource);
+    default void configure(@NonNull Map<String, String> openTelemetryProperties, Resource openTelemetryResource, boolean disableShutdownHook){}
 
     @Deprecated
     OpenTelemetry getImplementation();
