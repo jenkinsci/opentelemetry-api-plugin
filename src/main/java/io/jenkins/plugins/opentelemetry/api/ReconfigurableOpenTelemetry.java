@@ -62,6 +62,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
     Resource resource = Resource.empty();
     ConfigProperties config = ConfigPropertiesUtils.emptyConfig();
     OpenTelemetry openTelemetryImpl = OpenTelemetry.noop();
+    Thread shutdownHook;
     final ReconfigurableMeterProvider meterProviderImpl = new ReconfigurableMeterProvider();
     final ReconfigurableTracerProvider traceProviderImpl = new ReconfigurableTracerProvider();
     final ReconfigurableLoggerProvider loggerProviderImpl = new ReconfigurableLoggerProvider();
@@ -82,14 +83,14 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             logger.log(Level.WARNING, "GlobalEventLoggerProvider already set", e);
         }
 
-        logger.log(Level.FINE, () -> "Initialize " +
+        logger.log(Level.FINE, () -> "Configure " +
                 "GlobalOpenTelemetry with instance " + Optional.of(GlobalOpenTelemetry.get()).map(ot -> ot + "@" + System.identityHashCode(ot)) + "and " +
                 "GlobalEventLoggerProvide with instance " + Optional.of(GlobalEventLoggerProvider.get()).map(elp -> elp + "@" + System.identityHashCode(elp)));
     }
 
     @Initializer(after = InitMilestone.EXTENSIONS_AUGMENTED, before = InitMilestone.SYSTEM_CONFIG_LOADED)
     public void init() {
-        logger.log(Level.INFO, "OpenTelemetry initialized as NoOp");
+        logger.log(Level.INFO, "OpenTelemetry configured as NoOp");
     }
 
     /**
@@ -112,7 +113,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             logger.log(Level.FINE, "initializeOtlp");
 
             // OPENTELEMETRY SDK
-            AutoConfiguredOpenTelemetrySdkBuilder autoConfiguredOpenTelemetrySdkBuilder = AutoConfiguredOpenTelemetrySdk
+            OpenTelemetrySdk openTelemetrySdk = AutoConfiguredOpenTelemetrySdk
                     .builder()
                     // properties
                     .addPropertiesSupplier(() -> openTelemetryProperties)
@@ -129,14 +130,26 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                                         .putAll(openTelemetryResource).build();
                                 return this.resource;
                             }
-                    );
-            if (disableShutdownHook) {
-                autoConfiguredOpenTelemetrySdkBuilder.disableShutdownHook();
-            }
-            OpenTelemetrySdk openTelemetrySdk = autoConfiguredOpenTelemetrySdkBuilder
+                    )
+                    .disableShutdownHook()
                     .build()
                     .getOpenTelemetrySdk();
             setOpenTelemetryImpl(openTelemetrySdk);
+
+            if (disableShutdownHook) {
+                if (shutdownHook == null) {
+                    // nothing to do, no shutdownhook registered
+                } else {
+                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                }
+            } else {
+                if (shutdownHook == null) {
+                    shutdownHook = new Thread(this::close);
+                    Runtime.getRuntime().addShutdownHook(shutdownHook);
+                } else {
+                    // nothing to do, shutdown hook already registered
+                }
+            }
 
             logger.log(Level.INFO, () -> "OpenTelemetry initialized: " + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
 
@@ -262,5 +275,19 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             logger.log(Level.FINE, () -> "Notify " + openTelemetryLifecycleListener + " after OpenTelemetry configuration");
             openTelemetryLifecycleListener.afterConfiguration(this.config);
         });
+    }
+
+    static class ShutdownHook extends Thread {
+        final OpenTelemetrySdk openTelemetrySdk;
+
+        public ShutdownHook(OpenTelemetrySdk openTelemetrySdk) {
+            super("OpenTelemetry SDK Shutdown Hook");
+            this.openTelemetrySdk = openTelemetrySdk;
+        }
+
+        @Override
+        public void run() {
+            openTelemetrySdk.close();
+        }
     }
 }
