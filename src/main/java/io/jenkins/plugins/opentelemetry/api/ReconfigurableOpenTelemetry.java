@@ -28,7 +28,6 @@ import io.opentelemetry.api.trace.TracerProvider;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
-import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdkBuilder;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.logs.internal.SdkEventLoggerProvider;
@@ -41,24 +40,34 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * <p>
- * Reconfigurable {@link EventLoggerProvider} that allows to reconfigure the {@link Tracer}s,
- * {@link io.opentelemetry.api.logs.Logger}s, and {@link EventLogger}s.
+ * Reconfigurable {@link OpenTelemetry}.
  * </p>
  * <p>
  * We need reconfigurability because Jenkins supports changing the configuration of the OpenTelemetry params at runtime.
  * All instantiated tracers, loggers, and eventLoggers are reconfigured when the configuration changes, when
  * {@link ReconfigurableOpenTelemetry#configure(Map, Resource)} is invoked.
  * </p>
+ * <p>
+ * Reconfigurable {@link EventLoggerProvider} that allows to reconfigure the {@link Tracer}s,
+ * {@link io.opentelemetry.api.logs.Logger}s, and {@link EventLogger}s.
+ * </p>
+ * <p>
+ * Jenkins components interested in being notified after the OpenTelemetry configuration changes can be marked as @{@link Extension}
+ * and implement {@link OpenTelemetryLifecycleListener}.
+ * </p>
  */
-@Extension(ordinal = Integer.MAX_VALUE)
 public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenTelemetry, Closeable, ExtensionPoint {
 
-    protected final Logger logger = Logger.getLogger(getClass().getName());
+    private final static Logger logger = Logger.getLogger(ReconfigurableOpenTelemetry.class.getName());
+    private final static ReconfigurableOpenTelemetry INSTANCE = new ReconfigurableOpenTelemetry();
+    private final static AtomicInteger GET_INVOCATION_COUNT = new AtomicInteger(0);
+
     Resource resource = Resource.empty();
     ConfigProperties config = ConfigPropertiesUtils.emptyConfig();
     OpenTelemetry openTelemetryImpl = OpenTelemetry.noop();
@@ -68,8 +77,39 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
     final ReconfigurableLoggerProvider loggerProviderImpl = new ReconfigurableLoggerProvider();
     final ReconfigurableEventLoggerProvider eventLoggerProviderImpl = new ReconfigurableEventLoggerProvider();
 
+    /*
+     * Ensures this class is loaded and the static singleton `INSTANCE` is instantiated.
+     */
+    @Initializer(after = InitMilestone.EXTENSIONS_AUGMENTED, before = InitMilestone.SYSTEM_CONFIG_LOADED)
+    public static void init() {
+        logger.log(Level.FINE, () -> "OpenTelemetry configured as NoOp: " + INSTANCE);
+    }
+
     /**
-     * Initialize as NoOp
+     * Use a factory method for the @{@link Extension} to ensure single instantiation
+     * across Jenkins
+     * <p>
+     *     The Jenkins component {@link ReconfigurableOpenTelemetry} is instantiated through the static factory method
+     *     {@link #get()} rather than through the instance constructor to ensure that we have single
+     *     instantiation across Jenkins' @{@link Extension} and Google Guice @{@link com.google.inject.Inject}.
+     * </p>
+     * <p>
+     *     This {@link #get()} factory method works in conjunction with {@link OpenTelemetryApiGuiceModule}
+     * </p>
+     */
+    @Extension(ordinal = Integer.MAX_VALUE)
+    public static ReconfigurableOpenTelemetry get() {
+        int getInvocationCount = GET_INVOCATION_COUNT.incrementAndGet();
+        logger.log(Level.FINE, () -> "get(invocationCount=" + getInvocationCount + "): " + INSTANCE);
+        return INSTANCE;
+    }
+
+    /**
+     * <p>
+     * Initialize as NoOp.
+     * </p>
+
+     * @see #get()
      */
     public ReconfigurableOpenTelemetry() {
         try {
@@ -88,13 +128,9 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                 "GlobalEventLoggerProvide with instance " + Optional.of(GlobalEventLoggerProvider.get()).map(elp -> elp + "@" + System.identityHashCode(elp)));
     }
 
-    @Initializer(after = InitMilestone.EXTENSIONS_AUGMENTED, before = InitMilestone.SYSTEM_CONFIG_LOADED)
-    public void init() {
-        logger.log(Level.INFO, "OpenTelemetry configured as NoOp");
-    }
-
     /**
      * Configure the OpenTelemetry SDK with the given properties and resource disabling the OTel SDK shutdown hook
+     * @deprecated use {@link #configure(Map, Resource, boolean)} instead
      */
     @Deprecated
     @Override
@@ -136,9 +172,9 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                     .getOpenTelemetrySdk();
             setOpenTelemetryImpl(openTelemetrySdk);
 
-            logger.log(Level.INFO, () -> "OpenTelemetry SDK configured: " + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
+            logger.log(Level.INFO, () -> "OpenTelemetry configured: " + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
 
-          if (disableShutdownHook) {
+            if (disableShutdownHook) {
                 if (shutdownHook == null) {
                     // nothing to do, no shutdownhook registered
                 } else {
@@ -159,7 +195,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             this.config = ConfigPropertiesUtils.emptyConfig();
             setOpenTelemetryImpl(OpenTelemetry.noop());
 
-            logger.log(Level.INFO, "OpenTelemetry configured as NoOp");
+            logger.log(Level.FINE, () -> "OpenTelemetry configured as NoOp");
         }
 
         postOpenTelemetrySdkConfiguration();
@@ -275,19 +311,5 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             logger.log(Level.FINE, () -> "Notify " + openTelemetryLifecycleListener + " after OpenTelemetry configuration");
             openTelemetryLifecycleListener.afterConfiguration(this.config);
         });
-    }
-
-    static class ShutdownHook extends Thread {
-        final OpenTelemetrySdk openTelemetrySdk;
-
-        public ShutdownHook(OpenTelemetrySdk openTelemetrySdk) {
-            super("OpenTelemetry SDK Shutdown Hook");
-            this.openTelemetrySdk = openTelemetrySdk;
-        }
-
-        @Override
-        public void run() {
-            openTelemetrySdk.close();
-        }
     }
 }

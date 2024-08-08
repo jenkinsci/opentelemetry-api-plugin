@@ -10,9 +10,10 @@ public class ApacheHttpClientInstrumentationTest {
 
     @Test
     public void test_instantiate_instrumented_http_client() {
-        ReconfigurableOpenTelemetry openTelemetry = new ReconfigurableOpenTelemetry();
-        HttpClientBuilder httpClientBuilder = ApacheHttpClientTelemetry.create(openTelemetry).newHttpClientBuilder();
-        CloseableHttpClient httpClient = httpClientBuilder.build();
-        System.out.println(httpClient);
+        try (ReconfigurableOpenTelemetry openTelemetry = new ReconfigurableOpenTelemetry()) {
+            HttpClientBuilder httpClientBuilder = ApacheHttpClientTelemetry.create(openTelemetry).newHttpClientBuilder();
+            CloseableHttpClient httpClient = httpClientBuilder.build();
+            System.out.println(httpClient);
+        }
     }
 }
