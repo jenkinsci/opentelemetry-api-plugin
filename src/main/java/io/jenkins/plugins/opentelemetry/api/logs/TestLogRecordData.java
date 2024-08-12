@@ -20,7 +20,7 @@ import javax.annotation.concurrent.Immutable;
 
 /**
  * <p>
- * Inspired by {@link io.opentelemetry.sdk.testing.logs.TestLogRecordData}.
+ * Inspired by `io.opentelemetry.sdk.testing.logs.TestLogRecordData`.
  * </p>
  * <p>
  * {@link AutoValue_TestLogRecordData} is manually recopied with the source code. See its javadoc.
