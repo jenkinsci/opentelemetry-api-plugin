@@ -13,12 +13,18 @@ import io.opentelemetry.sdk.common.InstrumentationScopeInfo;
 import io.opentelemetry.sdk.logs.data.Body;
 import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.resources.Resource;
+
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.concurrent.Immutable;
 
 /**
- * Inspired by {@link io.opentelemetry.sdk.testing.logs.TestLogRecordData}
+ * <p>
+ * Inspired by {@link io.opentelemetry.sdk.testing.logs.TestLogRecordData}.
+ * </p>
+ * <p>
+ * {@link AutoValue_TestLogRecordData} is manually recopied with the source code. See its javadoc.
+ * </p>
  */
 @Immutable
 @AutoValue
@@ -46,7 +52,7 @@ public abstract class TestLogRecordData implements LogRecordData {
         public abstract Builder setInstrumentationScopeInfo(InstrumentationScopeInfo var1);
 
         public Builder setTimestamp(Instant instant) {
-            return this.setTimestampEpochNanos(TimeUnit.SECONDS.toNanos(instant.getEpochSecond()) + (long)instant.getNano());
+            return this.setTimestampEpochNanos(TimeUnit.SECONDS.toNanos(instant.getEpochSecond()) + (long) instant.getNano());
         }
 
         public Builder setTimestamp(long timestamp, TimeUnit unit) {
@@ -56,7 +62,7 @@ public abstract class TestLogRecordData implements LogRecordData {
         abstract Builder setTimestampEpochNanos(long var1);
 
         public Builder setObservedTimestamp(Instant instant) {
-            return this.setObservedTimestampEpochNanos(TimeUnit.SECONDS.toNanos(instant.getEpochSecond()) + (long)instant.getNano());
+            return this.setObservedTimestampEpochNanos(TimeUnit.SECONDS.toNanos(instant.getEpochSecond()) + (long) instant.getNano());
         }
 
         public Builder setObservedTimestamp(long timestamp, TimeUnit unit) {
