@@ -116,7 +116,6 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
      * <p>
      * Initialize as NoOp.
      * </p>
-     *
      * @see #get()
      */
     public ReconfigurableOpenTelemetry() {
@@ -138,7 +137,6 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
 
     /**
      * Configure the OpenTelemetry SDK with the given properties and resource disabling the OTel SDK shutdown hook
-     *
      * @deprecated use {@link #configure(Map, Resource, boolean)} instead
      */
     @Deprecated
@@ -230,26 +228,6 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
         this.traceProviderImpl.setDelegate(openTelemetryImpl.getTracerProvider());
         this.loggerProviderImpl.setDelegate(openTelemetryImpl.getLogsBridge());
         this.eventLoggerProviderImpl.setDelegate(SdkEventLoggerProvider.create(openTelemetryImpl.getLogsBridge()));
-    }
-
-    public String testLogRecordExporter() {
-        return testLogRecordExporter("Test log record");
-    }
-
-    public String testLogRecordExporter(String message) {
-        LogRecordData logRecordData = TestLogRecordData.builder()
-                .setTimestamp(Instant.now())
-                .setResource(resource)
-                .setSeverityText(Severity.INFO.name())
-                .setSeverity(Severity.INFO)
-                .setInstrumentationScopeInfo(InstrumentationScopeInfo.create("io.jenkins.opentelemetry.api"))
-                .setBody(message)
-                .build();
-        CompletableResultCode result = logRecordExporter.export(Collections.singleton(logRecordData));
-        result.join(1, TimeUnit.SECONDS);
-        String resultMessage = "testLogRecordExporter(): result(success: " + result.isSuccess() + "done: " + result.isDone() + "), " + logRecordExporter + ", " + logRecordData + " -";
-        logger.log(Level.INFO, resultMessage);
-        return resultMessage;
     }
 
     @PreDestroy
