@@ -28,6 +28,7 @@
         <opentelemetry-instrumentation.version>2.6.0</opentelemetry-instrumentation.version>
         <opentelemetry-semconv.version>1.25.0-alpha</opentelemetry-semconv.version>
 
+        <auto-value.version>1.11.0</auto-value.version>
         <jenkins.version>2.440.3</jenkins.version>
 
         <changelist>999999-SNAPSHOT</changelist>
@@ -108,6 +109,12 @@
         <dependency>
             <groupId>io.jenkins.plugins</groupId>
             <artifactId>okhttp-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.auto.value</groupId>
+            <artifactId>auto-value-annotations</artifactId>
+            <version>${auto-value.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.opentelemetry</groupId>

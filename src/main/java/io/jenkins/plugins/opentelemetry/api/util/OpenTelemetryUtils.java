@@ -1,9 +1,23 @@
 package io.jenkins.plugins.opentelemetry.api.util;
 
+import io.jenkins.plugins.opentelemetry.api.ReconfigurableOpenTelemetry;
+import io.jenkins.plugins.opentelemetry.api.logs.TestLogRecordData;
+import io.opentelemetry.api.logs.Severity;
+import io.opentelemetry.sdk.common.CompletableResultCode;
+import io.opentelemetry.sdk.common.InstrumentationScopeInfo;
+import io.opentelemetry.sdk.logs.data.LogRecordData;
+
+import java.time.Instant;
+import java.util.Collections;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  * Utility methods for working with OpenTelemetry.
  */
 public class OpenTelemetryUtils {
+    private final static Logger logger = Logger.getLogger(OpenTelemetryUtils.class.getName());
 
     /**
      * <p>
@@ -44,6 +58,22 @@ public class OpenTelemetryUtils {
         return defaultValue;
     }
 
+    static public String testLogRecordExporter() {
+        ReconfigurableOpenTelemetry openTelemetry = ReconfigurableOpenTelemetry.get();
+        LogRecordData logRecordData = TestLogRecordData.builder()
+                .setTimestamp(Instant.now())
+                .setResource(openTelemetry.getResource())
+                .setSeverityText(Severity.INFO.name())
+                .setSeverity(Severity.INFO)
+                .setInstrumentationScopeInfo(InstrumentationScopeInfo.create("io.jenkins.opentelemetry.api"))
+                .setBody("Test log record")
+                .build();
+        CompletableResultCode result = openTelemetry.getLogRecordExporter().export(Collections.singleton(logRecordData));
+        result.join(1, TimeUnit.SECONDS);
+        String resultMessage = "testLogRecordExporter(): result(success: " + result.isSuccess() + "done: " + result.isDone() + "), " + openTelemetry.getLogRecordExporter() + ", " + logRecordData + " -";
+        logger.log(Level.INFO, resultMessage);
+        return resultMessage;
+    }
 
     private OpenTelemetryUtils() {
     }

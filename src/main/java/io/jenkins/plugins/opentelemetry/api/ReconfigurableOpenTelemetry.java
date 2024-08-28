@@ -12,6 +12,7 @@ import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 import hudson.init.InitMilestone;
 import hudson.init.Initializer;
+import io.jenkins.plugins.opentelemetry.api.logs.TestLogRecordData;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.incubator.events.EventLogger;
@@ -19,6 +20,7 @@ import io.opentelemetry.api.incubator.events.EventLoggerBuilder;
 import io.opentelemetry.api.incubator.events.EventLoggerProvider;
 import io.opentelemetry.api.incubator.events.GlobalEventLoggerProvider;
 import io.opentelemetry.api.logs.LoggerProvider;
+import io.opentelemetry.api.logs.Severity;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.metrics.MeterBuilder;
 import io.opentelemetry.api.metrics.MeterProvider;
@@ -30,12 +32,17 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.common.CompletableResultCode;
+import io.opentelemetry.sdk.common.InstrumentationScopeInfo;
+import io.opentelemetry.sdk.logs.data.LogRecordData;
+import io.opentelemetry.sdk.logs.export.LogRecordExporter;
 import io.opentelemetry.sdk.logs.internal.SdkEventLoggerProvider;
 import io.opentelemetry.sdk.resources.Resource;
 
 import javax.annotation.OverridingMethodsMustInvokeSuper;
 import javax.annotation.PreDestroy;
 import java.io.Closeable;
+import java.time.Instant;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -71,6 +78,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
     Resource resource = Resource.empty();
     ConfigProperties config = ConfigPropertiesUtils.emptyConfig();
     OpenTelemetry openTelemetryImpl = OpenTelemetry.noop();
+    LogRecordExporter logRecordExporter = NoopLogRecordExporter.getInstance();
     Thread shutdownHook;
     final ReconfigurableMeterProvider meterProviderImpl = new ReconfigurableMeterProvider();
     final ReconfigurableTracerProvider traceProviderImpl = new ReconfigurableTracerProvider();
@@ -89,12 +97,12 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
      * Use a factory method for the @{@link Extension} to ensure single instantiation
      * across Jenkins
      * <p>
-     *     The Jenkins component {@link ReconfigurableOpenTelemetry} is instantiated through the static factory method
-     *     {@link #get()} rather than through the instance constructor to ensure that we have single
-     *     instantiation across Jenkins' @{@link Extension} and Google Guice @{@link com.google.inject.Inject}.
+     * The Jenkins component {@link ReconfigurableOpenTelemetry} is instantiated through the static factory method
+     * {@link #get()} rather than through the instance constructor to ensure that we have single
+     * instantiation across Jenkins' @{@link Extension} and Google Guice @{@link com.google.inject.Inject}.
      * </p>
      * <p>
-     *     This {@link #get()} factory method works in conjunction with {@link OpenTelemetryApiGuiceModule}
+     * This {@link #get()} factory method works in conjunction with {@link OpenTelemetryApiGuiceModule}
      * </p>
      */
     @Extension(ordinal = Integer.MAX_VALUE)
@@ -108,7 +116,6 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
      * <p>
      * Initialize as NoOp.
      * </p>
-
      * @see #get()
      */
     public ReconfigurableOpenTelemetry() {
@@ -146,7 +153,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                 openTelemetryProperties.containsKey("otel.metrics.exporter") ||
                 openTelemetryProperties.containsKey("otel.logs.exporter")) {
 
-            logger.log(Level.FINE, "configure...");
+            logger.log(Level.FINE, "initializeOtlp");
 
             // OPENTELEMETRY SDK
             OpenTelemetrySdk openTelemetrySdk = AutoConfiguredOpenTelemetrySdk
@@ -167,33 +174,40 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                                 return this.resource;
                             }
                     )
+                    .addLogRecordExporterCustomizer((logRecordExporter, configProperties) -> {
+                        // keep a reference to the computed LogRecordExporter for future use in the plugin
+                        this.logRecordExporter = logRecordExporter;
+                        return logRecordExporter;
+                    })
                     .disableShutdownHook()
                     .build()
                     .getOpenTelemetrySdk();
             setOpenTelemetryImpl(openTelemetrySdk);
 
-            logger.log(Level.INFO, () -> "OpenTelemetry configured: " + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
-
             if (disableShutdownHook) {
                 if (shutdownHook == null) {
-                    // nothing to do, no shutdownhook registered
+                    // nothing to do, no shutdown hook registered
                 } else {
                     Runtime.getRuntime().removeShutdownHook(shutdownHook);
                 }
             } else {
                 if (shutdownHook == null) {
-                    shutdownHook = new Thread(this::close);
+                    shutdownHook = new Thread(this::close, "Reconfigurable OpenTelemetry SDK Shutdown Hook");
                     Runtime.getRuntime().addShutdownHook(shutdownHook);
                 } else {
                     // nothing to do, shutdown hook already registered
                 }
             }
 
+            logger.log(Level.INFO, () -> "OpenTelemetry configured: " + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
+
         } else { // NO-OP
 
             this.resource = Resource.empty();
             this.config = ConfigPropertiesUtils.emptyConfig();
             setOpenTelemetryImpl(OpenTelemetry.noop());
+
+            this.logRecordExporter = NoopLogRecordExporter.getInstance();
 
             logger.log(Level.FINE, () -> "OpenTelemetry configured as NoOp");
         }
@@ -305,11 +319,52 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
         return openTelemetryImpl.getPropagators();
     }
 
+    /**
+     * For testing and troubleshooting purpose
+     */
+    public LogRecordExporter getLogRecordExporter() {
+        return logRecordExporter;
+    }
+
     @OverridingMethodsMustInvokeSuper
     protected void postOpenTelemetrySdkConfiguration() {
         ExtensionList.lookup(OpenTelemetryLifecycleListener.class).stream().sorted().forEach(openTelemetryLifecycleListener -> {
             logger.log(Level.FINE, () -> "Notify " + openTelemetryLifecycleListener + " after OpenTelemetry configuration");
             openTelemetryLifecycleListener.afterConfiguration(this.config);
         });
+    }
+
+    /**
+     * Noop implementation of {@link LogRecordExporter}
+     */
+    private static class NoopLogRecordExporter implements LogRecordExporter {
+        final static NoopLogRecordExporter INSTANCE = new NoopLogRecordExporter();
+
+        static NoopLogRecordExporter getInstance() {
+            return INSTANCE;
+        }
+
+        private NoopLogRecordExporter() {
+        }
+
+        @Override
+        public CompletableResultCode export(Collection<LogRecordData> logs) {
+            return CompletableResultCode.ofSuccess();
+        }
+
+        @Override
+        public CompletableResultCode flush() {
+            return CompletableResultCode.ofSuccess();
+        }
+
+        @Override
+        public CompletableResultCode shutdown() {
+            return CompletableResultCode.ofSuccess();
+        }
+
+        @Override
+        public String toString() {
+            return "NoopLogRecordExporter";
+        }
     }
 }
