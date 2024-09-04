@@ -12,7 +12,6 @@ import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 import hudson.init.InitMilestone;
 import hudson.init.Initializer;
-import io.jenkins.plugins.opentelemetry.api.logs.TestLogRecordData;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.incubator.events.EventLogger;
@@ -20,7 +19,6 @@ import io.opentelemetry.api.incubator.events.EventLoggerBuilder;
 import io.opentelemetry.api.incubator.events.EventLoggerProvider;
 import io.opentelemetry.api.incubator.events.GlobalEventLoggerProvider;
 import io.opentelemetry.api.logs.LoggerProvider;
-import io.opentelemetry.api.logs.Severity;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.metrics.MeterBuilder;
 import io.opentelemetry.api.metrics.MeterProvider;
@@ -32,7 +30,6 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.common.CompletableResultCode;
-import io.opentelemetry.sdk.common.InstrumentationScopeInfo;
 import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
 import io.opentelemetry.sdk.logs.internal.SdkEventLoggerProvider;
@@ -41,7 +38,6 @@ import io.opentelemetry.sdk.resources.Resource;
 import javax.annotation.OverridingMethodsMustInvokeSuper;
 import javax.annotation.PreDestroy;
 import java.io.Closeable;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -102,7 +98,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
      * instantiation across Jenkins' @{@link Extension} and Google Guice @{@link com.google.inject.Inject}.
      * </p>
      * <p>
-     * This {@link #get()} factory method works in conjunction with {@link OpenTelemetryApiGuiceModule}
+     * This factory method works in conjunction with {@link OpenTelemetryApiGuiceModule}
      * </p>
      */
     @Extension(ordinal = Integer.MAX_VALUE)
@@ -116,6 +112,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
      * <p>
      * Initialize as NoOp.
      * </p>
+     *
      * @see #get()
      */
     public ReconfigurableOpenTelemetry() {
@@ -137,6 +134,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
 
     /**
      * Configure the OpenTelemetry SDK with the given properties and resource disabling the OTel SDK shutdown hook
+     *
      * @deprecated use {@link #configure(Map, Resource, boolean)} instead
      */
     @Deprecated
@@ -159,7 +157,18 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             OpenTelemetrySdk openTelemetrySdk = AutoConfiguredOpenTelemetrySdk
                     .builder()
                     // properties
-                    .addPropertiesSupplier(() -> openTelemetryProperties)
+                    .addPropertiesCustomizer((Function<ConfigProperties, Map<String, String>>) configProperties -> {
+                        // Overwrite OTel SDK Properties loaded through Environment variables and `-Dotel.*` system
+                        // properties by properties passed through the Jenkins OTel Plugin config GUI
+                        if (logger.isLoggable(Level.INFO)) {
+                            for (Map.Entry<String, String> keyValue : openTelemetryProperties.entrySet()) {
+                                if (configProperties.getString(keyValue.getKey()) != null) {
+                                    logger.log(Level.INFO, "Overwrite OTel SDK property: " + keyValue.getKey() + "=" + configProperties.getString(keyValue.getKey()) + " with Jenkins Plugin property: " + keyValue.getValue());
+                                }
+                            }
+                        }
+                        return openTelemetryProperties;
+                    })
                     .addPropertiesCustomizer((Function<ConfigProperties, Map<String, String>>) configProperties -> {
                         // keep a reference to the computed config properties for future use in the plugin
                         this.config = configProperties;
