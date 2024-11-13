@@ -29,7 +29,9 @@
         <opentelemetry-semconv.version>1.28.0-alpha</opentelemetry-semconv.version>
 
         <auto-value.version>1.11.0</auto-value.version>
-        <jenkins.version>2.479.1</jenkins.version>
+    <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
+    <jenkins.baseline>2.479</jenkins.baseline>
+    <jenkins.version>${jenkins.baseline}.1</jenkins.version>
 
         <changelist>999999-SNAPSHOT</changelist>
         <gitHubRepo>jenkinsci/opentelemetry-api-plugin</gitHubRepo>
