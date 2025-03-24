@@ -36,6 +36,7 @@ import io.opentelemetry.api.metrics.ObservableMeasurement;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.sdk.common.InstrumentationScopeInfo;
 import io.opentelemetry.sdk.common.InstrumentationScopeInfoBuilder;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,18 +44,18 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /*
- * https://github.com/open-telemetry/opentelemetry-java-instrumentation/blob/main/testing-common/src/main/java/io/opentelemetry/instrumentation/testing/LibraryTestRunner.java#L87
- */
+* https://github.com/open-telemetry/opentelemetry-java-instrumentation/blob/main/testing-common/src/main/java/io/opentelemetry/instrumentation/testing/LibraryTestRunner.java#L87
+*/
 
-public class ReconfigurableMeterProviderTest {
+class ReconfigurableMeterProviderTest {
 
-    final static Random random = new Random();
+    static final Random random = new Random();
 
-    @org.junit.Test
-    public void test() {
+    @Test
+    void test() {
         ReconfigurableMeterProvider meterProvider = new ReconfigurableMeterProvider();
 
         MeterProviderMock meterProviderImpl_1 = new MeterProviderMock();
@@ -227,7 +228,7 @@ public class ReconfigurableMeterProviderTest {
 
 
     static class MeterProviderMock implements MeterProvider {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String id;
 
         public MeterProviderMock() {
@@ -246,7 +247,7 @@ public class ReconfigurableMeterProviderTest {
     }
 
     static class MeterMock implements Meter {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
 
         final InstrumentationScopeInfo instrumentationScopeInfo;
         final String meterProviderId;
@@ -285,7 +286,7 @@ public class ReconfigurableMeterProviderTest {
     }
 
     static class MeterBuilderMock implements MeterBuilder {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String id;
         final InstrumentationScopeInfoBuilder instrumentationScopeInfoBuilder;
         final String meterProviderId;
@@ -414,7 +415,7 @@ public class ReconfigurableMeterProviderTest {
     }
 
     static class ObservableDoubleCounterMock implements ObservableDoubleCounter {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String meterProviderId;
         final String meterId;
         final String id;
@@ -432,7 +433,7 @@ public class ReconfigurableMeterProviderTest {
     }
 
     static class DoubleCounterMock implements DoubleCounter {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String meterProviderId;
         final String meterId;
         final String id;
@@ -460,7 +461,7 @@ public class ReconfigurableMeterProviderTest {
     }
 
     static class LongCounterMock implements LongCounter {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String meterProviderId;
         final String meterId;
         final String id;
@@ -488,7 +489,7 @@ public class ReconfigurableMeterProviderTest {
     }
 
     static class LongGaugeMock implements LongGauge {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String meterProviderId;
         final String meterId;
         final String id;
@@ -659,7 +660,7 @@ public class ReconfigurableMeterProviderTest {
     }
 
     static class DoubleGaugeMock implements DoubleGauge {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String meterProviderId;
         final String meterId;
         final String id;
@@ -735,7 +736,7 @@ public class ReconfigurableMeterProviderTest {
     }
 
     static class DoubleHistogramMock implements DoubleHistogram {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String meterProviderId;
         final String meterId;
         final String id;
@@ -806,7 +807,7 @@ public class ReconfigurableMeterProviderTest {
     }
 
     static class LongHistogramMock implements LongHistogram {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String meterProviderId;
         final String meterId;
         final String id;

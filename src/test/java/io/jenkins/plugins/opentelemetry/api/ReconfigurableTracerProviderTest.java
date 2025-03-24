@@ -9,15 +9,17 @@ import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.TracerBuilder;
 import io.opentelemetry.api.trace.TracerProvider;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class ReconfigurableTracerProviderTest {
-    @org.junit.Test
-    public void test() {
+class ReconfigurableTracerProviderTest {
+
+    @Test
+    void test() {
         ReconfigurableTracerProvider tracerProvider = new ReconfigurableTracerProvider();
 
         TracerProviderMock tracerProviderImpl_1 = new TracerProviderMock();
@@ -75,7 +77,7 @@ public class ReconfigurableTracerProviderTest {
 
 
     static class TracerProviderMock implements TracerProvider {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String id;
 
         public TracerProviderMock() {
@@ -99,7 +101,7 @@ public class ReconfigurableTracerProviderTest {
     }
 
     static class TracerMock implements Tracer {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
 
         final String instrumentationScopeName;
         final String tracerProviderId;
@@ -130,7 +132,7 @@ public class ReconfigurableTracerProviderTest {
     }
 
     static class TracerBuilderMock implements TracerBuilder {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String id;
         final String instrumentationScopeName;
         final String tracerProviderId;

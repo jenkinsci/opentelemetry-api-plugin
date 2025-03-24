@@ -1,18 +1,20 @@
 package io.jenkins.plugins.opentelemetry;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+
+import org.junit.jupiter.api.Test;
+
 import static org.hamcrest.CoreMatchers.*;
 
-import org.junit.Test;
+class ClasspathTest {
 
-public class ClasspathTest {
     @Test
-    public void testClasspath() throws ClassNotFoundException {
+    void testClasspath() throws ClassNotFoundException {
         assertThat(Class.forName("io.opentelemetry.api.OpenTelemetry"), notNullValue());
     }
 
     @Test
-    public void testGetOpenTelemetryInstance() {
+    void testGetOpenTelemetryInstance() {
         io.opentelemetry.api.GlobalOpenTelemetry.get();
         io.opentelemetry.api.incubator.events.GlobalEventLoggerProvider.get();
     }
