@@ -4,12 +4,12 @@ import io.jenkins.plugins.opentelemetry.api.ReconfigurableOpenTelemetry;
 import io.opentelemetry.instrumentation.apachehttpclient.v4_3.ApacheHttpClientTelemetry;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class ApacheHttpClientInstrumentationTest {
+class ApacheHttpClientInstrumentationTest {
 
     @Test
-    public void test_instantiate_instrumented_http_client() {
+    void test_instantiate_instrumented_http_client() {
         try (ReconfigurableOpenTelemetry openTelemetry = new ReconfigurableOpenTelemetry()) {
             HttpClientBuilder httpClientBuilder = ApacheHttpClientTelemetry.create(openTelemetry).newHttpClientBuilder();
             CloseableHttpClient httpClient = httpClientBuilder.build();

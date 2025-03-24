@@ -3,27 +3,26 @@ package io.jenkins.plugins.opentelemetry.api;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.semconv.ServiceAttributes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ReconfigurableOpenTelemetryTest {
+class ReconfigurableOpenTelemetryTest {
 
     static ReconfigurableOpenTelemetry reconfigurableOpenTelemetry;
 
-    @BeforeClass
-    public static void beforeClass() {
+    @BeforeAll
+    static void beforeClass() {
         reconfigurableOpenTelemetry = ReconfigurableOpenTelemetry.get();
     }
 
     @Test
-    public void test_logRecordExporter() {
-
+    void test_logRecordExporter() {
         Map<String, String> otelConfig = new HashMap<>();
         otelConfig.put("otel.exporter.otlp.endpoint", "http://localhost:4317");
         Resource otelResource = Resource.builder().put("service.name", "ReconfigurableOpenTelemetry test").build();
@@ -40,7 +39,7 @@ public class ReconfigurableOpenTelemetryTest {
     }
 
     @Test
-    public void test_configuration_through_system_properties() {
+    void test_configuration_through_system_properties() {
         System.setProperty("otel.instrumentation.jdbc.enabled", "true");
         System.setProperty("otel.service.name", "jenkins-456");
         try {
@@ -58,8 +57,7 @@ public class ReconfigurableOpenTelemetryTest {
     }
 
     @Test
-    public void test_configuration_through_passed_properties() {
-
+    void test_configuration_through_passed_properties() {
         try {
             Map<String, String> otelConfig = new HashMap<>();
             otelConfig.put("otel.exporter.otlp.endpoint", "http://localhost:4317");
@@ -77,7 +75,7 @@ public class ReconfigurableOpenTelemetryTest {
     }
 
     @Test
-    public void test_configuration_through_passed_properties_overwrites() {
+    void test_configuration_through_passed_properties_overwrites() {
         System.setProperty("otel.instrumentation.jdbc.enabled", "true");
         System.setProperty("otel.service.name", "jenkins-456");
         try {
@@ -96,8 +94,8 @@ public class ReconfigurableOpenTelemetryTest {
         }
     }
 
-    @AfterClass
-    public static void afterClass() {
+    @AfterAll
+    static void afterClass() {
         reconfigurableOpenTelemetry.close();
     }
 }

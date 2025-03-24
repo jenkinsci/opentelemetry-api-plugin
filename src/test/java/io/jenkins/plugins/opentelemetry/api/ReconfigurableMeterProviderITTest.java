@@ -18,24 +18,23 @@ import io.opentelemetry.instrumentation.runtimemetrics.java8.Cpu;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.logs.export.SimpleLogRecordProcessor;
-import io.opentelemetry.sdk.logs.internal.SdkEventLoggerProvider;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.testing.exporter.InMemoryLogRecordExporter;
 import io.opentelemetry.sdk.testing.exporter.InMemoryMetricReader;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * https://github.com/open-telemetry/opentelemetry-java-instrumentation/blob/main/testing-common/src/main/java/io/opentelemetry/instrumentation/testing/LibraryTestRunner.java#L87
  */
-public class ReconfigurableMeterProviderITTest {
-
+class ReconfigurableMeterProviderITTest {
 
     @Test
-    public void testPlainOpenTelemetrySdk() {
+    void testPlainOpenTelemetrySdk() {
         try (OpenTelemetryTest openTelemetryTest = newOpenTelemetryTest()) {
             InMemoryMetricReader metricReader = openTelemetryTest.metricReader;
             MeterProvider meterProvider = openTelemetryTest.openTelemetrySdk.getMeterProvider();
@@ -66,7 +65,7 @@ public class ReconfigurableMeterProviderITTest {
     }
 
     @Test
-    public void testReconfigurableOpenTelemetrySdk() {
+    void testReconfigurableOpenTelemetrySdk() {
         try (ReconfigurableOpenTelemetry reconfigurableOpenTelemetry = new ReconfigurableOpenTelemetry()) {
             try (OpenTelemetryTest openTelemetryTest = newOpenTelemetryTest()) {
                 reconfigurableOpenTelemetry.setOpenTelemetryImpl(openTelemetryTest.openTelemetrySdk);
@@ -99,7 +98,7 @@ public class ReconfigurableMeterProviderITTest {
     }
 
     @Test
-    public void testReconfigurableOpenTelemetrySdkAfterNopInitialization() {
+    void testReconfigurableOpenTelemetrySdkAfterNopInitialization() {
         try (ReconfigurableOpenTelemetry reconfigurableOpenTelemetry = new ReconfigurableOpenTelemetry()) {
 
             MeterProvider meterProvider = reconfigurableOpenTelemetry.getMeterProvider();
@@ -173,11 +172,11 @@ public class ReconfigurableMeterProviderITTest {
 
 
     private static void assertMetricExist(String metricName, InMemoryMetricReader metricReader) {
-        Assert.assertTrue("Metric '" + metricName + "' was not exported", metricReader.collectAllMetrics().stream().anyMatch(metricData -> metricName.equals(metricData.getName())));
+        assertTrue(metricReader.collectAllMetrics().stream().anyMatch(metricData -> metricName.equals(metricData.getName())), "Metric '" + metricName + "' was not exported");
     }
 
     private static void assertMetricDoesntExist(String metricName, InMemoryMetricReader metricReader) {
-        Assert.assertTrue("Metric '" + metricName + "' should not exist", metricReader.collectAllMetrics().stream().noneMatch(metricData -> metricName.equals(metricData.getName())));
+        assertTrue(metricReader.collectAllMetrics().stream().noneMatch(metricData -> metricName.equals(metricData.getName())), "Metric '" + metricName + "' should not exist");
     }
 
     OpenTelemetryTest newOpenTelemetryTest() {

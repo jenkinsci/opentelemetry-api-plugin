@@ -9,16 +9,17 @@ import io.opentelemetry.api.incubator.events.EventBuilder;
 import io.opentelemetry.api.incubator.events.EventLogger;
 import io.opentelemetry.api.incubator.events.EventLoggerBuilder;
 import io.opentelemetry.api.incubator.events.EventLoggerProvider;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class ReconfigurableEventLoggerProviderTest {
+class ReconfigurableEventLoggerProviderTest {
 
-    @org.junit.Test
-    public void testEventLoggerBuilder() {
+    @Test
+    void testEventLoggerBuilder() {
         ReconfigurableEventLoggerProvider eventLoggerProvider = new ReconfigurableEventLoggerProvider();
 
         EventLoggerProviderMock eventLoggerProviderImpl_1 = new EventLoggerProviderMock();
@@ -76,7 +77,7 @@ public class ReconfigurableEventLoggerProviderTest {
 
 
     static class EventLoggerProviderMock implements EventLoggerProvider {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String id;
 
         public EventLoggerProviderMock() {
@@ -95,7 +96,7 @@ public class ReconfigurableEventLoggerProviderTest {
     }
 
     static class EventLoggerMock implements EventLogger {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
 
         final String instrumentationScopeName;
         final String eventLoggerProviderId;
@@ -122,7 +123,7 @@ public class ReconfigurableEventLoggerProviderTest {
     }
 
     static class EventLoggerBuilderMock implements EventLoggerBuilder {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String id;
         final String instrumentationScopeName;
         final String eventLoggerProviderId;

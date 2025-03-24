@@ -10,16 +10,17 @@ import io.opentelemetry.api.logs.LogRecordBuilder;
 import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.logs.LoggerBuilder;
 import io.opentelemetry.api.logs.LoggerProvider;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class ReconfigurableLoggerProviderTest {
+class ReconfigurableLoggerProviderTest {
 
-    @org.junit.Test
-    public void testLoggerBuilder() {
+    @Test
+    void testLoggerBuilder() {
         ReconfigurableLoggerProvider loggerProvider = new ReconfigurableLoggerProvider();
 
         LoggerProviderMock loggerProviderImpl_1 = new LoggerProviderMock();
@@ -77,7 +78,7 @@ public class ReconfigurableLoggerProviderTest {
 
 
     static class LoggerProviderMock implements LoggerProvider {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String id;
 
         public LoggerProviderMock() {
@@ -96,7 +97,7 @@ public class ReconfigurableLoggerProviderTest {
     }
 
     static class LoggerMock implements Logger {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
 
         final String instrumentationScopeName;
         final String loggerProviderId;
@@ -123,7 +124,7 @@ public class ReconfigurableLoggerProviderTest {
     }
 
     static class LoggerBuilderMock implements LoggerBuilder {
-        static AtomicInteger ID_SOURCE = new AtomicInteger(0);
+        static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
         final String id;
         final String instrumentationScopeName;
         final String loggerProviderId;
