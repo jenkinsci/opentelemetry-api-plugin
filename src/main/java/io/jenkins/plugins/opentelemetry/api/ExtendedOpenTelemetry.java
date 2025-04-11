@@ -3,8 +3,6 @@ package io.jenkins.plugins.opentelemetry.api;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionPoint;
 import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.incubator.events.EventLoggerBuilder;
-import io.opentelemetry.api.incubator.events.EventLoggerProvider;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.resources.Resource;
 
@@ -15,16 +13,12 @@ import java.util.function.Supplier;
 /**
  * Extension of {@link OpenTelemetry} that provides additional functionality:
  * <ul>
- *     <li>Accessor to the {@link EventLoggerProvider} without requiring using a separate {@link io.opentelemetry.api.incubator.events.GlobalEventLoggerProvider}</li>
  *     <li>Read access top the {@link ConfigProperties} and {@link Resource}</li>
  *     <li>Ability to be reconfigured through {@link #configure(Map, Resource, boolean)}</li>
  *     <li>Ability to be used as a Jenkins {@link hudson.Extension}</li>
  * </ul>
  */
 public interface ExtendedOpenTelemetry extends ExtensionPoint, OpenTelemetry {
-    EventLoggerProvider getEventLoggerProvider();
-
-    EventLoggerBuilder eventLoggerBuilder(String instrumentationScopeName);
 
     /**
      * {@link ConfigProperties} used to instantiate this OpenTelemetry instance using the {@link io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk}.

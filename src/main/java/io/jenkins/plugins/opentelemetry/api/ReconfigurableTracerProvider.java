@@ -6,6 +6,7 @@
 package io.jenkins.plugins.opentelemetry.api;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.opentelemetry.api.incubator.trace.ExtendedSpanBuilder;
 import io.opentelemetry.api.incubator.trace.ExtendedTracer;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.Tracer;
@@ -156,7 +157,7 @@ class ReconfigurableTracerProvider implements TracerProvider {
         }
 
         @Override
-        public SpanBuilder spanBuilder(@Nonnull String spanName) {
+        public ExtendedSpanBuilder spanBuilder(@Nonnull String spanName) {
             lock.readLock().lock();
             try {
                 return delegate.spanBuilder(spanName);

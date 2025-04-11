@@ -10,7 +10,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>5.9</version>
+        <version>5.10</version>
         <relativePath/>
     </parent>
 
@@ -25,14 +25,14 @@
     <properties>
         <changelist>999999-SNAPSHOT</changelist>
         <gitHubRepo>jenkinsci/opentelemetry-api-plugin</gitHubRepo>
-        <opentelemetry.version>1.46.0</opentelemetry.version>
-        <opentelemetry-instrumentation.version>2.12.0</opentelemetry-instrumentation.version>
-        <opentelemetry-semconv.version>1.29.0-alpha</opentelemetry-semconv.version>
+        <opentelemetry.version>1.49.0</opentelemetry.version>
+        <opentelemetry-instrumentation.version>2.15.0</opentelemetry-instrumentation.version>
+        <opentelemetry-semconv.version>1.32.0</opentelemetry-semconv.version>
 
         <auto-value.version>1.11.0</auto-value.version>
         <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
         <jenkins.baseline>2.479</jenkins.baseline>
-        <jenkins.version>${jenkins.baseline}.1</jenkins.version>
+        <jenkins.version>${jenkins.baseline}.3</jenkins.version>
 
         <changelist>999999-SNAPSHOT</changelist>
         <gitHubRepo>jenkinsci/opentelemetry-api-plugin</gitHubRepo>
@@ -59,7 +59,7 @@
         <dependency>
             <groupId>io.opentelemetry.semconv</groupId>
             <artifactId>opentelemetry-semconv-incubating</artifactId>
-            <version>${opentelemetry-semconv.version}</version>
+            <version>${opentelemetry-semconv.version}-alpha</version>
         </dependency>
         <dependency>
             <groupId>io.opentelemetry.instrumentation</groupId>
@@ -163,7 +163,7 @@
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
                 <artifactId>bom-${jenkins.baseline}.x</artifactId>
-                <version>4570.v1b_c718dd3b_1e</version>
+                <version>4583.v0a_f4df179fa_b_</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
