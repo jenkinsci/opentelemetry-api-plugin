@@ -6,8 +6,8 @@
 package io.jenkins.plugins.opentelemetry.api;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.opentelemetry.api.incubator.logs.ExtendedLogRecordBuilder;
 import io.opentelemetry.api.incubator.logs.ExtendedLogger;
-import io.opentelemetry.api.logs.LogRecordBuilder;
 import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.logs.LoggerBuilder;
 import io.opentelemetry.api.logs.LoggerProvider;
@@ -28,6 +28,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * All instantiated loggers are reconfigured when the configuration changes, when
  * {@link ReconfigurableLoggerProvider#setDelegate(LoggerProvider)} is invoked.
  * </p>
+ *  * <p>
+ *  *     IMPORTANT: requires the OpenTelemetry API incubator module to be on the classpath for provided
+ *  *     {@link LoggerProvider} to create {@link ExtendedLogger}s.
+ *  * </p>
  */
 class ReconfigurableLoggerProvider implements LoggerProvider {
 
@@ -35,7 +39,7 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
 
     private LoggerProvider delegate;
 
-    private final ConcurrentMap<InstrumentationScope, ReconfigurableLogger> loggers = new ConcurrentHashMap<>();
+    private final ConcurrentMap<InstrumentationScope, ReconfigurableExtendedLogger> loggers = new ConcurrentHashMap<>();
 
     public ReconfigurableLoggerProvider() {
         this(LoggerProvider.noop());
@@ -60,7 +64,7 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
         lock.readLock().lock();
         try {
             InstrumentationScope instrumentationScope = new InstrumentationScope(instrumentationScopeName);
-            return loggers.computeIfAbsent(instrumentationScope, scope -> new ReconfigurableLogger(delegate.get(instrumentationScopeName), lock));
+            return loggers.computeIfAbsent(instrumentationScope, scope -> new ReconfigurableExtendedLogger(delegate.get(instrumentationScopeName), lock));
         } finally {
             lock.readLock().unlock();
         }
@@ -112,22 +116,22 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
         @Override
         public Logger build() {
             InstrumentationScope instrumentationScope = new InstrumentationScope(instrumentationScopeName, schemaUrl, instrumentationScopeVersion);
-            return loggers.computeIfAbsent(instrumentationScope, scope -> new ReconfigurableLogger(delegate.build(), lock));
+            return loggers.computeIfAbsent(instrumentationScope, scope -> new ReconfigurableExtendedLogger(delegate.build(), lock));
         }
     }
 
     @VisibleForTesting
-    protected static class ReconfigurableLogger implements ExtendedLogger {
+    protected static class ReconfigurableExtendedLogger implements ExtendedLogger {
         ReadWriteLock lock;
-        Logger delegate;
+        ExtendedLogger delegate;
 
-        public ReconfigurableLogger(Logger delegate, ReadWriteLock lock) {
-            this.delegate = delegate;
+        public ReconfigurableExtendedLogger(Logger delegate, ReadWriteLock lock) {
+            this.delegate = requiresExtendedLogger(delegate);
             this.lock = lock;
         }
 
         @Override
-        public LogRecordBuilder logRecordBuilder() {
+        public ExtendedLogRecordBuilder logRecordBuilder() {
             lock.readLock().lock();
             try {
                 return delegate.logRecordBuilder();
@@ -139,7 +143,7 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
         public void setDelegate(Logger delegate) {
             lock.writeLock().lock();
             try {
-                this.delegate = delegate;
+                this.delegate = requiresExtendedLogger(delegate);
             } finally {
                 lock.writeLock().unlock();
             }
@@ -149,15 +153,28 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
         public boolean isEnabled() {
             lock.readLock().lock();
             try {
-                if (delegate instanceof ExtendedLogger) {
-                    return ((ExtendedLogger) delegate).isEnabled();
-                } else {
-                    // It's the NO OP impl
-                    return false;
-                }
+                return delegate.isEnabled();
             } finally {
                 lock.readLock().unlock();
             }
+        }
+
+        private static ExtendedLogger requiresExtendedLogger(Logger logger) {
+            if (!(logger instanceof ExtendedLogger)) {
+                // code copied from
+                // https://github.com/open-telemetry/opentelemetry-java/blob/v1.49.0/sdk/logs/src/main/java/io/opentelemetry/sdk/logs/SdkLogger.java#L21-L27
+                boolean incubatorAvailable = false;
+                try {
+                    Class.forName("io.opentelemetry.api.incubator.logs.ExtendedDefaultLoggerProvider");
+                    incubatorAvailable = true;
+                } catch (ClassNotFoundException e) {
+                    // Not available
+                }
+
+                throw new IllegalStateException("Delegate '" + logger + "' must be an instance of Extended. " +
+                        "API incubator module is not on the classpath: " + incubatorAvailable);
+            }
+            return (ExtendedLogger) logger;
         }
     }
 }
