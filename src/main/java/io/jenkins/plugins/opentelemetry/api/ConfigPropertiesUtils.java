@@ -47,7 +47,12 @@ class ConfigPropertiesUtils {
                 message.put(attributeName, attributeValue);
             }
         }
-        return message.entrySet().stream().map(entry -> entry.getKey() + "=" + entry.getValue()).collect(Collectors.joining(", "));
+        return message
+                .entrySet()
+                .stream()
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .collect(Collectors.joining(", "))
+                + "...";
     }
     static String prettyPrintResource(@Nullable Resource resource) {
         if (resource == null) {
@@ -60,7 +65,12 @@ class ConfigPropertiesUtils {
                 message.put(attributeKey.getKey(), Objects.toString(attributeValue, "#null#"));
             }
         }
-        return message.entrySet().stream().map(entry -> entry.getKey() + "=" + entry.getValue()).collect(Collectors.joining(", "));
+        return message
+                .entrySet()
+                .stream()
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .collect(Collectors.joining(", "))
+                + "...";
     }
     private final static List<String> noteworthyConfigurationPropertyNames = Arrays.asList(
             "otel.resource.attributes", "otel.service.name",
