@@ -6,6 +6,8 @@
 package io.jenkins.plugins.opentelemetry.api;
 
 
+import io.opentelemetry.api.incubator.logs.ExtendedLogRecordBuilder;
+import io.opentelemetry.api.incubator.logs.ExtendedLogger;
 import io.opentelemetry.api.logs.LogRecordBuilder;
 import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.logs.LoggerBuilder;
@@ -17,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ReconfigurableLoggerProviderTest {
+class ReconfigurableExtendedLoggerProviderTest {
 
     @Test
     void testLoggerBuilder() {
@@ -26,7 +28,7 @@ class ReconfigurableLoggerProviderTest {
         LoggerProviderMock loggerProviderImpl_1 = new LoggerProviderMock();
         loggerProvider.setDelegate(loggerProviderImpl_1);
 
-        ReconfigurableLoggerProvider.ReconfigurableLogger authenticationLogger = (ReconfigurableLoggerProvider.ReconfigurableLogger) loggerProvider
+        ReconfigurableLoggerProvider.ReconfigurableExtendedLogger authenticationLogger = (ReconfigurableLoggerProvider.ReconfigurableExtendedLogger) loggerProvider
             .loggerBuilder("io.jenkins.authentication")
             .setInstrumentationVersion("1.0.0")
             .build();
@@ -38,7 +40,7 @@ class ReconfigurableLoggerProviderTest {
         assertEquals(loggerProviderImpl_1.id, authenticationLoggerImpl.loggerProviderId);
 
 
-        ReconfigurableLoggerProvider.ReconfigurableLogger buildLogger = (ReconfigurableLoggerProvider.ReconfigurableLogger) loggerProvider
+        ReconfigurableLoggerProvider.ReconfigurableExtendedLogger buildLogger = (ReconfigurableLoggerProvider.ReconfigurableExtendedLogger) loggerProvider
             .loggerBuilder("io.jenkins.build")
             .setSchemaUrl("https://jenkins.io/build")
             .build();
@@ -48,7 +50,7 @@ class ReconfigurableLoggerProviderTest {
         assertNull(buildLoggerImpl.instrumentationVersion);
         assertEquals(loggerProviderImpl_1.id, buildLoggerImpl.loggerProviderId);
 
-        ReconfigurableLoggerProvider.ReconfigurableLogger buildLoggerShouldBeTheSameInstance = (ReconfigurableLoggerProvider.ReconfigurableLogger) loggerProvider
+        ReconfigurableLoggerProvider.ReconfigurableExtendedLogger buildLoggerShouldBeTheSameInstance = (ReconfigurableLoggerProvider.ReconfigurableExtendedLogger) loggerProvider
             .loggerBuilder("io.jenkins.build")
             .setSchemaUrl("https://jenkins.io/build")
             .build();
@@ -92,7 +94,7 @@ class ReconfigurableLoggerProviderTest {
 
         @Override
         public Logger get(String instrumentationScopeName) {
-            return new LoggerMock(instrumentationScopeName, id);
+            return new ExtendedLoggerMock(instrumentationScopeName, id);
         }
     }
 
@@ -119,6 +121,26 @@ class ReconfigurableLoggerProviderTest {
 
         @Override
         public LogRecordBuilder logRecordBuilder() {
+            throw new UnsupportedOperationException();
+        }
+    }
+    
+    static class ExtendedLoggerMock extends LoggerMock implements ExtendedLogger{
+        public ExtendedLoggerMock(String instrumentationScopeName, String loggerProviderId) {
+            super(instrumentationScopeName, loggerProviderId);
+        }
+
+        public ExtendedLoggerMock(String instrumentationScopeName, String loggerProviderId, @Nullable String schemaUrl, @Nullable String instrumentationVersion) {
+            super(instrumentationScopeName, loggerProviderId, schemaUrl, instrumentationVersion);
+        }
+
+        @Override
+        public boolean isEnabled() {
+            return ExtendedLogger.super.isEnabled();
+        }
+
+        @Override
+        public ExtendedLogRecordBuilder logRecordBuilder() {
             throw new UnsupportedOperationException();
         }
     }
@@ -152,7 +174,7 @@ class ReconfigurableLoggerProviderTest {
 
         @Override
         public Logger build() {
-            return new LoggerMock(instrumentationScopeName, loggerProviderId, schemaUrl, instrumentationVersion);
+            return new ExtendedLoggerMock(instrumentationScopeName, loggerProviderId, schemaUrl, instrumentationVersion);
         }
     }
 }

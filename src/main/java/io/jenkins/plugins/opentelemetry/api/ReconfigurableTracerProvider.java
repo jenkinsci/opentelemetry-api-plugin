@@ -6,8 +6,8 @@
 package io.jenkins.plugins.opentelemetry.api;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.opentelemetry.api.incubator.trace.ExtendedSpanBuilder;
 import io.opentelemetry.api.incubator.trace.ExtendedTracer;
-import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.TracerBuilder;
 import io.opentelemetry.api.trace.TracerProvider;
@@ -29,6 +29,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * All instantiated tracers are reconfigured when the configuration changes, when
  * {@link ReconfigurableTracerProvider#setDelegate(TracerProvider)} is invoked.
  * </p>
+ * <p>
+ *     IMPORTANT: requires the OpenTelemetry API incubator module to be on the classpath for provided
+ *     {@link TracerProvider} to create {@link ExtendedTracer}s.
+ * </p>
  */
 class ReconfigurableTracerProvider implements TracerProvider {
 
@@ -36,7 +40,7 @@ class ReconfigurableTracerProvider implements TracerProvider {
 
     private TracerProvider delegate;
 
-    private final ConcurrentMap<InstrumentationScope, ReconfigurableTracer> tracers = new ConcurrentHashMap<>();
+    private final ConcurrentMap<InstrumentationScope, ReconfigurableExtendedTracer> tracers = new ConcurrentHashMap<>();
 
     public ReconfigurableTracerProvider() {
         this(TracerProvider.noop());
@@ -52,7 +56,7 @@ class ReconfigurableTracerProvider implements TracerProvider {
         try {
             return tracers.computeIfAbsent(
                     new InstrumentationScope(instrumentationScopeName),
-                    instrumentationScope -> new ReconfigurableTracer(delegate.get(instrumentationScope.instrumentationScopeName), lock));
+                    instrumentationScope -> new ReconfigurableExtendedTracer(delegate.get(instrumentationScope.instrumentationScopeName), lock));
         } finally {
             lock.readLock().unlock();
         }
@@ -62,11 +66,11 @@ class ReconfigurableTracerProvider implements TracerProvider {
         lock.writeLock().lock();
         try {
             this.delegate = delegate;
-            tracers.forEach((instrumentationScope, reconfigurableTracer) -> {
+            tracers.forEach((instrumentationScope, reconfigurableExtendedTracer) -> {
                 TracerBuilder tracerBuilder = delegate.tracerBuilder(instrumentationScope.instrumentationScopeName);
                 Optional.ofNullable(instrumentationScope.instrumentationScopeVersion).ifPresent(tracerBuilder::setInstrumentationVersion);
                 Optional.ofNullable(instrumentationScope.schemaUrl).ifPresent(tracerBuilder::setSchemaUrl);
-                reconfigurableTracer.setDelegate(tracerBuilder.build());
+                reconfigurableExtendedTracer.setDelegate(tracerBuilder.build());
             });
         } finally {
             lock.writeLock().unlock();
@@ -79,7 +83,7 @@ class ReconfigurableTracerProvider implements TracerProvider {
         try {
             return tracers.computeIfAbsent(
                     new InstrumentationScope(instrumentationScopeName, null, instrumentationScopeVersion),
-                    instrumentationScope -> new ReconfigurableTracer(delegate.get(instrumentationScopeName, instrumentationScopeVersion), lock));
+                    instrumentationScope -> new ReconfigurableExtendedTracer(delegate.get(instrumentationScopeName, instrumentationScopeVersion), lock));
         } finally {
             lock.readLock().unlock();
         }
@@ -133,11 +137,11 @@ class ReconfigurableTracerProvider implements TracerProvider {
         }
 
         @Override
-        public ExtendedTracer build() {
+        public Tracer build() {
             lock.readLock().lock();
             try {
                 InstrumentationScope instrumentationScope = new InstrumentationScope(instrumentationScopeName, schemaUrl, instrumentationScopeVersion);
-                return tracers.computeIfAbsent(instrumentationScope, k -> new ReconfigurableTracer(delegate.build(), lock));
+                return tracers.computeIfAbsent(instrumentationScope, k -> new ReconfigurableExtendedTracer(delegate.build(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -145,18 +149,36 @@ class ReconfigurableTracerProvider implements TracerProvider {
     }
 
     @VisibleForTesting
-    protected static class ReconfigurableTracer implements ExtendedTracer {
+    protected static class ReconfigurableExtendedTracer implements ExtendedTracer {
         final ReadWriteLock lock;
 
-        Tracer delegate;
+        ExtendedTracer delegate;
 
-        public ReconfigurableTracer(Tracer delegate, ReadWriteLock lock) {
-            this.lock = lock;
-            this.delegate = delegate;
+        public ReconfigurableExtendedTracer(Tracer delegate, ReadWriteLock lock) {
+            this.lock = Objects.requireNonNull(lock, "lock");
+            this.delegate = Objects.requireNonNull(requiresExtendedTracer(delegate), "delegate");
+        }
+
+        private static ExtendedTracer requiresExtendedTracer(Tracer tracer) {
+            if (!(tracer instanceof ExtendedTracer)) {
+                // code copied from
+                // https://github.com/open-telemetry/opentelemetry-java/blob/v1.49.0/sdk/trace/src/main/java/io/opentelemetry/sdk/trace/SdkTracer.java#L21-L27
+                boolean incubatorAvailable = false;
+                try {
+                    Class.forName("io.opentelemetry.api.incubator.trace.ExtendedDefaultTracerProvider");
+                    incubatorAvailable = true;
+                } catch (ClassNotFoundException e) {
+                    // Not available
+                }
+
+                throw new IllegalStateException("Delegate '" + tracer + "' must be an instance of ExtendedTracer. " +
+                        "API incubator module is not on the classpath: " + incubatorAvailable);
+            }
+            return (ExtendedTracer) tracer;
         }
 
         @Override
-        public SpanBuilder spanBuilder(@Nonnull String spanName) {
+        public ExtendedSpanBuilder spanBuilder(@Nonnull String spanName) {
             lock.readLock().lock();
             try {
                 return delegate.spanBuilder(spanName);
@@ -168,13 +190,13 @@ class ReconfigurableTracerProvider implements TracerProvider {
         public void setDelegate(Tracer delegate) {
             lock.writeLock().lock();
             try {
-                this.delegate = delegate;
+                this.delegate = requiresExtendedTracer(delegate);
             } finally {
                 lock.writeLock().unlock();
             }
         }
 
-        public Tracer getDelegate() {
+        public ExtendedTracer getDelegate() {
             lock.readLock().lock();
             try {
                 return delegate;
@@ -187,12 +209,7 @@ class ReconfigurableTracerProvider implements TracerProvider {
         public boolean isEnabled() {
             lock.readLock().lock();
             try {
-                if (delegate instanceof ExtendedTracer) {
-                    return ((ExtendedTracer) delegate).isEnabled();
-                } else {
-                    // It's the NO OP impl
-                    return false;
-                }
+                return delegate.isEnabled();
             } finally {
                 lock.readLock().unlock();
             }

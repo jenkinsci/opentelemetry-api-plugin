@@ -14,10 +14,6 @@ import hudson.init.InitMilestone;
 import hudson.init.Initializer;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.incubator.events.EventLogger;
-import io.opentelemetry.api.incubator.events.EventLoggerBuilder;
-import io.opentelemetry.api.incubator.events.EventLoggerProvider;
-import io.opentelemetry.api.incubator.events.GlobalEventLoggerProvider;
 import io.opentelemetry.api.logs.LoggerProvider;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.metrics.MeterBuilder;
@@ -32,7 +28,6 @@ import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
-import io.opentelemetry.sdk.logs.internal.SdkEventLoggerProvider;
 import io.opentelemetry.sdk.resources.Resource;
 
 import javax.annotation.OverridingMethodsMustInvokeSuper;
@@ -57,10 +52,6 @@ import java.util.logging.Logger;
  * {@link ReconfigurableOpenTelemetry#configure(Map, Resource)} is invoked.
  * </p>
  * <p>
- * Reconfigurable {@link EventLoggerProvider} that allows to reconfigure the {@link Tracer}s,
- * {@link io.opentelemetry.api.logs.Logger}s, and {@link EventLogger}s.
- * </p>
- * <p>
  * Jenkins components interested in being notified after the OpenTelemetry configuration changes can be marked as @{@link Extension}
  * and implement {@link OpenTelemetryLifecycleListener}.
  * </p>
@@ -79,7 +70,6 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
     final ReconfigurableMeterProvider meterProviderImpl = new ReconfigurableMeterProvider();
     final ReconfigurableTracerProvider traceProviderImpl = new ReconfigurableTracerProvider();
     final ReconfigurableLoggerProvider loggerProviderImpl = new ReconfigurableLoggerProvider();
-    final ReconfigurableEventLoggerProvider eventLoggerProviderImpl = new ReconfigurableEventLoggerProvider();
 
     /*
      * Ensures this class is loaded and the static singleton `INSTANCE` is instantiated.
@@ -121,15 +111,10 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
         } catch (IllegalStateException e) {
             logger.log(Level.WARNING, "GlobalOpenTelemetry already set", e);
         }
-        try {
-            GlobalEventLoggerProvider.set(eventLoggerProviderImpl);
-        } catch (IllegalStateException e) {
-            logger.log(Level.WARNING, "GlobalEventLoggerProvider already set", e);
-        }
 
         logger.log(Level.FINE, () -> "Configure " +
-                "GlobalOpenTelemetry with instance " + Optional.of(GlobalOpenTelemetry.get()).map(ot -> ot + "@" + System.identityHashCode(ot)) + "and " +
-                "GlobalEventLoggerProvide with instance " + Optional.of(GlobalEventLoggerProvider.get()).map(elp -> elp + "@" + System.identityHashCode(elp)));
+                "GlobalOpenTelemetry with instance " + Optional.of(GlobalOpenTelemetry.get())
+                .map(ot -> ot + "@" + System.identityHashCode(ot)));
     }
 
     /**
@@ -236,7 +221,6 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
         this.meterProviderImpl.setDelegate(openTelemetryImpl.getMeterProvider());
         this.traceProviderImpl.setDelegate(openTelemetryImpl.getTracerProvider());
         this.loggerProviderImpl.setDelegate(openTelemetryImpl.getLogsBridge());
-        this.eventLoggerProviderImpl.setDelegate(SdkEventLoggerProvider.create(openTelemetryImpl.getLogsBridge()));
     }
 
     @PreDestroy
@@ -252,7 +236,6 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             }
         }
         GlobalOpenTelemetry.resetForTest();
-        GlobalEventLoggerProvider.resetForTest();
     }
 
     @Override
@@ -278,16 +261,6 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
     @Override
     public MeterProvider getMeterProvider() {
         return meterProviderImpl;
-    }
-
-    @Override
-    public EventLoggerProvider getEventLoggerProvider() {
-        return eventLoggerProviderImpl;
-    }
-
-    @Override
-    public EventLoggerBuilder eventLoggerBuilder(String instrumentationScopeName) {
-        return eventLoggerProviderImpl.eventLoggerBuilder(instrumentationScopeName);
     }
 
     @Override

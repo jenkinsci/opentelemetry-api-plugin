@@ -1,10 +1,9 @@
 package io.jenkins.plugins.opentelemetry;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 class ClasspathTest {
 
@@ -16,6 +15,5 @@ class ClasspathTest {
     @Test
     void testGetOpenTelemetryInstance() {
         io.opentelemetry.api.GlobalOpenTelemetry.get();
-        io.opentelemetry.api.incubator.events.GlobalEventLoggerProvider.get();
     }
 }
