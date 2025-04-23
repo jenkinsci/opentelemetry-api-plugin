@@ -131,10 +131,10 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
     @Override
     public void configure(@NonNull Map<String, String> openTelemetryProperties, Resource openTelemetryResource, boolean disableShutdownHook) {
 
-        if (openTelemetryProperties.containsKey("otel.exporter.otlp.endpoint") ||
-                openTelemetryProperties.containsKey("otel.traces.exporter") ||
+        if (openTelemetryProperties.containsKey("otel.exporter.otlp.endpoint") &&
+                (openTelemetryProperties.containsKey("otel.traces.exporter") ||
                 openTelemetryProperties.containsKey("otel.metrics.exporter") ||
-                openTelemetryProperties.containsKey("otel.logs.exporter")) {
+                openTelemetryProperties.containsKey("otel.logs.exporter"))) {
 
             logger.log(Level.FINE, "initializeOtlp");
 
