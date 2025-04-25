@@ -134,6 +134,16 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             Resource openTelemetryResource,
             boolean disableShutdownHook) {
 
+        // Configure real OTel SDK if one of the following config is passed, 
+        // otherwise setup as no-op:
+        // 1. `otel.exporter.otlp.endpoint` is defined 
+        //    and one of `otel.[traces,logs,metrics].exporter` is set to `otlp`
+        //    either explicitly or implicitly as `otlp` is the default exporter
+        // 2. `otel.metrics.exporter` is set to `prometheus`
+        // 3. an `otel.[traces,logs,metrics].exporter` is set to something 
+        //    like `console` or `logging-otlp`
+        // 4. `otel.traces.exporter=zipkin` and the zipkin endpoint is set 
+        //     <-- we can ignore this deprecated case
         if (openTelemetryProperties.containsKey("otel.exporter.otlp.endpoint") &&
                 (openTelemetryProperties.containsKey("otel.traces.exporter") ||
                 openTelemetryProperties.containsKey("otel.metrics.exporter") ||
