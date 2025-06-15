@@ -46,7 +46,6 @@ class ReconfigurableOpenTelemetryTest {
         try {
             Map<String, String> otelConfig = new HashMap<>();
             otelConfig.put("otel.exporter.otlp.endpoint", "http://localhost:4317");
-            otelConfig.put("otel.traces.exporter", "otlp");
             Resource otelResource = Resource.builder().build();
             reconfigurableOpenTelemetry.configure(otelConfig, otelResource, true);
 
@@ -64,7 +63,6 @@ class ReconfigurableOpenTelemetryTest {
             Map<String, String> otelConfig = new HashMap<>();
             otelConfig.put("otel.exporter.otlp.endpoint", "http://localhost:4317");
             otelConfig.put("otel.instrumentation.jdbc.enabled", "true");
-            otelConfig.put("otel.traces.exporter", "otlp");
 
             Resource otelResource = Resource.builder().put(ServiceAttributes.SERVICE_NAME, "jenkins-123").build();
             reconfigurableOpenTelemetry.configure(otelConfig, otelResource, true);
@@ -84,7 +82,6 @@ class ReconfigurableOpenTelemetryTest {
         try {
             Map<String, String> otelConfig = new HashMap<>();
             otelConfig.put("otel.exporter.otlp.endpoint", "http://localhost:4317");
-            otelConfig.put("otel.traces.exporter", "otlp");
             otelConfig.put("otel.instrumentation.jdbc.enabled", "false");
 
             Resource otelResource = Resource.builder().put(ServiceAttributes.SERVICE_NAME, "jenkins-123").build();
@@ -103,7 +100,6 @@ class ReconfigurableOpenTelemetryTest {
         try {
             Map<String, String> otelConfig = new HashMap<>();
             otelConfig.put("otel.instrumentation.jdbc.enabled", "true");
-            otelConfig.put("otel.traces.exporter", "otlp");
 
             Resource otelResource = Resource.builder().put(ServiceAttributes.SERVICE_NAME, "jenkins-123").build();
             reconfigurableOpenTelemetry.configure(otelConfig, otelResource, true);
