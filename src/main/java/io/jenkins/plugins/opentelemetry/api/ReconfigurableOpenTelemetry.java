@@ -29,6 +29,12 @@ import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
 import io.opentelemetry.sdk.resources.Resource;
+
+import javax.annotation.OverridingMethodsMustInvokeSuper;
+import javax.annotation.PreDestroy;
+
+import org.apache.commons.lang.StringUtils;
+
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,8 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.OverridingMethodsMustInvokeSuper;
-import javax.annotation.PreDestroy;
+
 
 /**
  * <p>
@@ -137,17 +142,8 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
         // Configure real OTel SDK if one of the following config is passed, 
         // otherwise setup as no-op:
         // 1. `otel.exporter.otlp.endpoint` is defined 
-        //    and one of `otel.[traces,logs,metrics].exporter` is set to `otlp`
-        //    either explicitly or implicitly as `otlp` is the default exporter
-        // 2. `otel.metrics.exporter` is set to `prometheus`
-        // 3. an `otel.[traces,logs,metrics].exporter` is set to something 
-        //    like `console` or `logging-otlp`
-        // 4. `otel.traces.exporter=zipkin` and the zipkin endpoint is set 
-        //     <-- we can ignore this deprecated case
-        if (openTelemetryProperties.containsKey("otel.exporter.otlp.endpoint") &&
-                (openTelemetryProperties.containsKey("otel.traces.exporter") ||
-                openTelemetryProperties.containsKey("otel.metrics.exporter") ||
-                openTelemetryProperties.containsKey("otel.logs.exporter"))) {
+        //    `otel.[traces,logs,metrics].exporter` are `otlp` by default if they are not defined.
+        if (StringUtils.isNotBlank(openTelemetryProperties.get("otel.exporter.otlp.endpoint"))) {
 
             logger.log(Level.FINE, "initializeOtlp");
 
