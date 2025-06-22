@@ -44,10 +44,6 @@ import io.opentelemetry.api.metrics.ObservableMeasurement;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.sdk.common.InstrumentationScopeInfo;
 import io.opentelemetry.sdk.common.InstrumentationScopeInfoBuilder;
-
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
-import javax.annotation.concurrent.ThreadSafe;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -59,6 +55,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * <p>
@@ -72,7 +71,7 @@ import java.util.logging.Logger;
  */
 @ThreadSafe
 class ReconfigurableMeterProvider implements MeterProvider {
-    final static Logger logger = Logger.getLogger(ReconfigurableMeterProvider.class.getName());
+    static final Logger logger = Logger.getLogger(ReconfigurableMeterProvider.class.getName());
 
     @GuardedBy("lock")
     private MeterProvider delegate;
@@ -94,8 +93,9 @@ class ReconfigurableMeterProvider implements MeterProvider {
         lock.readLock().lock();
         try {
             return meters.computeIfAbsent(
-                InstrumentationScopeInfo.create(instrumentationScopeName),
-                instrumentationScopeInfo -> new ReconfigurableMeter(delegate.get(instrumentationScopeInfo.getName()), lock));
+                    InstrumentationScopeInfo.create(instrumentationScopeName),
+                    instrumentationScopeInfo ->
+                            new ReconfigurableMeter(delegate.get(instrumentationScopeInfo.getName()), lock));
         } finally {
             lock.readLock().unlock();
         }
@@ -107,7 +107,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
             this.delegate = delegate;
             meters.forEach((instrumentationScopeInfo, reconfigurableMeter) -> {
                 MeterBuilder meterBuilder = delegate.meterBuilder(instrumentationScopeInfo.getName());
-                Optional.ofNullable(instrumentationScopeInfo.getVersion()).ifPresent(meterBuilder::setInstrumentationVersion);
+                Optional.ofNullable(instrumentationScopeInfo.getVersion())
+                        .ifPresent(meterBuilder::setInstrumentationVersion);
                 Optional.ofNullable(instrumentationScopeInfo.getSchemaUrl()).ifPresent(meterBuilder::setSchemaUrl);
                 reconfigurableMeter.setDelegate(meterBuilder.build());
             });
@@ -120,7 +121,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
     public MeterBuilder meterBuilder(String instrumentationScopeName) {
         lock.readLock().lock();
         try {
-            return new ReconfigurableMeterBuilder(delegate.meterBuilder(instrumentationScopeName), instrumentationScopeName, lock);
+            return new ReconfigurableMeterBuilder(
+                    delegate.meterBuilder(instrumentationScopeName), instrumentationScopeName, lock);
         } finally {
             lock.readLock().unlock();
         }
@@ -140,7 +142,6 @@ class ReconfigurableMeterProvider implements MeterProvider {
         final ReadWriteLock lock;
         final MeterBuilder delegate;
         final InstrumentationScopeInfoBuilder instrumentationScopeInfoBuilder;
-
 
         public ReconfigurableMeterBuilder(MeterBuilder delegate, String instrumentationScopeName, ReadWriteLock lock) {
             this.delegate = Objects.requireNonNull(delegate);
@@ -177,7 +178,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 InstrumentationScopeInfo instrumentationScopeInfo = this.instrumentationScopeInfoBuilder.build();
-                return meters.computeIfAbsent(instrumentationScopeInfo, k -> new ReconfigurableMeter(delegate.build(), lock));
+                return meters.computeIfAbsent(
+                        instrumentationScopeInfo, k -> new ReconfigurableMeter(delegate.build(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -186,14 +188,21 @@ class ReconfigurableMeterProvider implements MeterProvider {
 
     static class InstrumentKey {
         final String name;
+
         @Nullable
         final String description;
+
         @Nullable
         final String unit;
+
         @Nullable
         final List<AttributeKey<?>> attributes;
 
-        public InstrumentKey(String name, @Nullable String description, @Nullable String unit, @Nullable List<AttributeKey<?>> attributes) {
+        public InstrumentKey(
+                String name,
+                @Nullable String description,
+                @Nullable String unit,
+                @Nullable List<AttributeKey<?>> attributes) {
             this.name = name;
             this.description = description;
             this.unit = unit;
@@ -209,7 +218,10 @@ class ReconfigurableMeterProvider implements MeterProvider {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             InstrumentKey that = (InstrumentKey) o;
-            return Objects.equals(name, that.name) && Objects.equals(description, that.description) && Objects.equals(unit, that.unit) && Objects.equals(attributes, that.attributes);
+            return Objects.equals(name, that.name)
+                    && Objects.equals(description, that.description)
+                    && Objects.equals(unit, that.unit)
+                    && Objects.equals(attributes, that.attributes);
         }
 
         @Override
@@ -222,7 +234,12 @@ class ReconfigurableMeterProvider implements MeterProvider {
         @Nullable
         final List<T> bucketBoundaries;
 
-        public HistogramKey(String name, @Nullable String description, @Nullable String unit, @Nullable List<AttributeKey<?>> attributes, @Nullable List<T> bucketBoundaries) {
+        public HistogramKey(
+                String name,
+                @Nullable String description,
+                @Nullable String unit,
+                @Nullable List<AttributeKey<?>> attributes,
+                @Nullable List<T> bucketBoundaries) {
             super(name, description, unit, attributes);
             this.bucketBoundaries = bucketBoundaries;
         }
@@ -242,16 +259,22 @@ class ReconfigurableMeterProvider implements MeterProvider {
         }
     }
 
-
     static class ObservableLongMeasurementCallbackKey {
         final String name;
+
         @Nullable
         final String description;
+
         @Nullable
         final String unit;
+
         final Consumer<ObservableLongMeasurement> callback;
 
-        public ObservableLongMeasurementCallbackKey(String name, @Nullable String description, @Nullable String unit, Consumer<ObservableLongMeasurement> callback) {
+        public ObservableLongMeasurementCallbackKey(
+                String name,
+                @Nullable String description,
+                @Nullable String unit,
+                Consumer<ObservableLongMeasurement> callback) {
             this.name = name;
             this.description = description;
             this.unit = unit;
@@ -263,7 +286,10 @@ class ReconfigurableMeterProvider implements MeterProvider {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             ObservableLongMeasurementCallbackKey that = (ObservableLongMeasurementCallbackKey) o;
-            return Objects.equals(name, that.name) && Objects.equals(description, that.description) && Objects.equals(unit, that.unit) && Objects.equals(callback, that.callback);
+            return Objects.equals(name, that.name)
+                    && Objects.equals(description, that.description)
+                    && Objects.equals(unit, that.unit)
+                    && Objects.equals(callback, that.callback);
         }
 
         @Override
@@ -274,13 +300,20 @@ class ReconfigurableMeterProvider implements MeterProvider {
 
     static class ObservableDoubleMeasurementCallbackKey {
         final String name;
+
         @Nullable
         final String description;
+
         @Nullable
         final String unit;
+
         final Consumer<ObservableDoubleMeasurement> callback;
 
-        public ObservableDoubleMeasurementCallbackKey(String name, @Nullable String description, @Nullable String unit, Consumer<ObservableDoubleMeasurement> callback) {
+        public ObservableDoubleMeasurementCallbackKey(
+                String name,
+                @Nullable String description,
+                @Nullable String unit,
+                Consumer<ObservableDoubleMeasurement> callback) {
             this.name = name;
             this.description = description;
             this.unit = unit;
@@ -292,7 +325,10 @@ class ReconfigurableMeterProvider implements MeterProvider {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             ObservableDoubleMeasurementCallbackKey that = (ObservableDoubleMeasurementCallbackKey) o;
-            return Objects.equals(name, that.name) && Objects.equals(description, that.description) && Objects.equals(unit, that.unit) && Objects.equals(callback, that.callback);
+            return Objects.equals(name, that.name)
+                    && Objects.equals(description, that.description)
+                    && Objects.equals(unit, that.unit)
+                    && Objects.equals(callback, that.callback);
         }
 
         @Override
@@ -305,44 +341,60 @@ class ReconfigurableMeterProvider implements MeterProvider {
     @VisibleForTesting
     protected static class ReconfigurableMeter implements Meter {
         final ReadWriteLock lock;
+
         @GuardedBy("lock")
         Meter delegate;
 
         // COUNTERS
         // long counters
         final ConcurrentMap<InstrumentKey, ReconfigurableLongCounter> longCounters = new ConcurrentHashMap<>();
-        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongCounter> observableLongCounters = new ConcurrentHashMap<>();
-        final ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongCounterMeasurements = new ConcurrentHashMap<>();
+        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongCounter>
+                observableLongCounters = new ConcurrentHashMap<>();
+        final ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongCounterMeasurements =
+                new ConcurrentHashMap<>();
         // double counters
         final ConcurrentMap<InstrumentKey, ReconfigurableDoubleCounter> doubleCounters = new ConcurrentHashMap<>();
-        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleCounter> observableDoubleCounters = new ConcurrentHashMap<>();
-        final ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleCounterMeasurements = new ConcurrentHashMap<>();
+        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleCounter>
+                observableDoubleCounters = new ConcurrentHashMap<>();
+        final ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement>
+                observableDoubleCounterMeasurements = new ConcurrentHashMap<>();
 
         // GAUGES
         // Long gauges
         final ConcurrentMap<InstrumentKey, ReconfigurableLongGauge> longGauges = new ConcurrentHashMap<>();
-        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongGauge> observableLongGauges = new ConcurrentHashMap<>();
-        final ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongGaugeMeasurements = new ConcurrentHashMap<>();
+        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongGauge>
+                observableLongGauges = new ConcurrentHashMap<>();
+        final ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongGaugeMeasurements =
+                new ConcurrentHashMap<>();
         // double gauges
         final ConcurrentMap<InstrumentKey, ReconfigurableDoubleGauge> doubleGauges = new ConcurrentHashMap<>();
-        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleGauge> observableDoubleGauges = new ConcurrentHashMap<>();
-        final ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleGaugeMeasurements = new ConcurrentHashMap<>();
+        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleGauge>
+                observableDoubleGauges = new ConcurrentHashMap<>();
+        final ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement>
+                observableDoubleGaugeMeasurements = new ConcurrentHashMap<>();
 
         // UP DOWN COUNTERS
         // Long counters
-        final ConcurrentMap<InstrumentKey, ReconfigurableLongUpDownCounter> longUpDownCounters = new ConcurrentHashMap<>();
-        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongUpDownCounter> observableLongUpDownCounters = new ConcurrentHashMap<>();
-        final ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongUpDownCounterMeasurements = new ConcurrentHashMap<>();
+        final ConcurrentMap<InstrumentKey, ReconfigurableLongUpDownCounter> longUpDownCounters =
+                new ConcurrentHashMap<>();
+        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongUpDownCounter>
+                observableLongUpDownCounters = new ConcurrentHashMap<>();
+        final ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement>
+                observableLongUpDownCounterMeasurements = new ConcurrentHashMap<>();
         // double counters
-        final ConcurrentMap<InstrumentKey, ReconfigurableDoubleUpDownCounter> doubleUpDownCounters = new ConcurrentHashMap<>();
-        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleUpDownCounter> observableDoubleUpDownCounters = new ConcurrentHashMap<>();
-        final ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleUpDownCounterMeasurements = new ConcurrentHashMap<>();
+        final ConcurrentMap<InstrumentKey, ReconfigurableDoubleUpDownCounter> doubleUpDownCounters =
+                new ConcurrentHashMap<>();
+        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleUpDownCounter>
+                observableDoubleUpDownCounters = new ConcurrentHashMap<>();
+        final ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement>
+                observableDoubleUpDownCounterMeasurements = new ConcurrentHashMap<>();
 
         // HISTOGRAMS
         // Long histograms
         final ConcurrentMap<HistogramKey<Long>, ReconfigurableLongHistogram> longHistograms = new ConcurrentHashMap<>();
         // Double histograms
-        final ConcurrentMap<HistogramKey<Double>, ReconfigurableDoubleHistogram> doubleHistograms = new ConcurrentHashMap<>();
+        final ConcurrentMap<HistogramKey<Double>, ReconfigurableDoubleHistogram> doubleHistograms =
+                new ConcurrentHashMap<>();
 
         // BATCH CALLBACKS
         final ConcurrentMap<BatchCallbackKey, ReconfigurableBatchCallback> batchCallbacks = new ConcurrentHashMap<>();
@@ -353,15 +405,30 @@ class ReconfigurableMeterProvider implements MeterProvider {
         }
 
         @Override
-        public BatchCallback batchCallback(Runnable callback, ObservableMeasurement observableMeasurement, ObservableMeasurement... additionalMeasurements) {
+        public BatchCallback batchCallback(
+                Runnable callback,
+                ObservableMeasurement observableMeasurement,
+                ObservableMeasurement... additionalMeasurements) {
             lock.readLock().lock();
             // io.opentelemetry.sdk.metrics.SdkMeter.batchCallback require the original ObservableMeasurement
-            // see https://github.com/open-telemetry/opentelemetry-java/blob/v1.39.0/sdk/metrics/src/main/java/io/opentelemetry/sdk/metrics/SdkMeter.java#L130
+            // see
+            // https://github.com/open-telemetry/opentelemetry-java/blob/v1.39.0/sdk/metrics/src/main/java/io/opentelemetry/sdk/metrics/SdkMeter.java#L130
             try {
                 BatchCallbackKey key = new BatchCallbackKey(callback, observableMeasurement, additionalMeasurements);
-                ObservableMeasurement originalObservableMeasurement = ((ReconfigurableObservableMeasurement<?>) observableMeasurement).getDelegate();
-                ObservableMeasurement[] originalAdditionalMeasurements = Arrays.stream(additionalMeasurements).map(additionalMeasurement -> ((ReconfigurableObservableMeasurement<? extends ObservableMeasurement>) additionalMeasurement).getDelegate()).toArray(ObservableMeasurement[]::new);
-                return this.batchCallbacks.computeIfAbsent(key, k -> new ReconfigurableBatchCallback(delegate.batchCallback(callback, originalObservableMeasurement, originalAdditionalMeasurements), lock));
+                ObservableMeasurement originalObservableMeasurement =
+                        ((ReconfigurableObservableMeasurement<?>) observableMeasurement).getDelegate();
+                ObservableMeasurement[] originalAdditionalMeasurements = Arrays.stream(additionalMeasurements)
+                        .map(additionalMeasurement -> ((ReconfigurableObservableMeasurement<
+                                                ? extends ObservableMeasurement>)
+                                        additionalMeasurement)
+                                .getDelegate())
+                        .toArray(ObservableMeasurement[]::new);
+                return this.batchCallbacks.computeIfAbsent(
+                        key,
+                        k -> new ReconfigurableBatchCallback(
+                                delegate.batchCallback(
+                                        callback, originalObservableMeasurement, originalAdditionalMeasurements),
+                                lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -371,10 +438,16 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public DoubleGaugeBuilder gaugeBuilder(String name) {
             lock.readLock().lock();
             try {
-                return new ReconfigurableDoubleGaugeBuilder(delegate.gaugeBuilder(name), name,
-                    doubleGauges, observableDoubleGauges, observableDoubleGaugeMeasurements,
-                    longGauges, observableLongGauges, observableLongGaugeMeasurements,
-                    lock);
+                return new ReconfigurableDoubleGaugeBuilder(
+                        delegate.gaugeBuilder(name),
+                        name,
+                        doubleGauges,
+                        observableDoubleGauges,
+                        observableDoubleGaugeMeasurements,
+                        longGauges,
+                        observableLongGauges,
+                        observableLongGaugeMeasurements,
+                        lock);
             } finally {
                 lock.readLock().unlock();
             }
@@ -386,10 +459,13 @@ class ReconfigurableMeterProvider implements MeterProvider {
             try {
                 DoubleHistogramBuilder doubleHistogramBuilder = delegate.histogramBuilder(name);
                 if (doubleHistogramBuilder instanceof ExtendedDoubleHistogramBuilder) {
-                    ExtendedDoubleHistogramBuilder histogramBuilder = (ExtendedDoubleHistogramBuilder) doubleHistogramBuilder;
-                    return new ReconfigurableDoubleHistogramBuilder(histogramBuilder, name, doubleHistograms, longHistograms, lock);
+                    ExtendedDoubleHistogramBuilder histogramBuilder =
+                            (ExtendedDoubleHistogramBuilder) doubleHistogramBuilder;
+                    return new ReconfigurableDoubleHistogramBuilder(
+                            histogramBuilder, name, doubleHistograms, longHistograms, lock);
                 } else {
-                    return new ReconfigurableDoubleHistogramBuilder(doubleHistogramBuilder, name, doubleHistograms, longHistograms, lock);
+                    return new ReconfigurableDoubleHistogramBuilder(
+                            doubleHistogramBuilder, name, doubleHistograms, longHistograms, lock);
                 }
             } finally {
                 lock.readLock().unlock();
@@ -400,9 +476,16 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public LongUpDownCounterBuilder upDownCounterBuilder(String name) {
             lock.readLock().lock();
             try {
-                return new ReconfigurableLongUpDownCounterBuilder(delegate.upDownCounterBuilder(name), name,
-                    longUpDownCounters, doubleUpDownCounters,
-                    observableLongUpDownCounters, observableLongUpDownCounterMeasurements, observableDoubleUpDownCounters, observableDoubleUpDownCounterMeasurements, lock);
+                return new ReconfigurableLongUpDownCounterBuilder(
+                        delegate.upDownCounterBuilder(name),
+                        name,
+                        longUpDownCounters,
+                        doubleUpDownCounters,
+                        observableLongUpDownCounters,
+                        observableLongUpDownCounterMeasurements,
+                        observableDoubleUpDownCounters,
+                        observableDoubleUpDownCounterMeasurements,
+                        lock);
             } finally {
                 lock.readLock().unlock();
             }
@@ -412,7 +495,16 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public LongCounterBuilder counterBuilder(String name) {
             lock.readLock().lock();
             try {
-                return new ReconfigurableLongCounterBuilder(delegate.counterBuilder(name), name, longCounters, doubleCounters, observableLongCounters, observableLongCounterMeasurements, observableDoubleCounters, observableDoubleCounterMeasurements, lock);
+                return new ReconfigurableLongCounterBuilder(
+                        delegate.counterBuilder(name),
+                        name,
+                        longCounters,
+                        doubleCounters,
+                        observableLongCounters,
+                        observableLongCounterMeasurements,
+                        observableDoubleCounters,
+                        observableDoubleCounterMeasurements,
+                        lock);
             } finally {
                 lock.readLock().unlock();
             }
@@ -436,38 +528,47 @@ class ReconfigurableMeterProvider implements MeterProvider {
                     Optional.ofNullable(callbackKey.description).ifPresent(longCounterBuilder::setDescription);
                     Optional.ofNullable(callbackKey.unit).ifPresent(longCounterBuilder::setUnit);
                     logger.log(Level.FINE, () -> "Reconfiguring observable long counter " + callbackKey.name);
-                    reconfigurableObservableLongCounter.setDelegate(longCounterBuilder.buildWithCallback(callbackKey.callback));
+                    reconfigurableObservableLongCounter.setDelegate(
+                            longCounterBuilder.buildWithCallback(callbackKey.callback));
                 });
-                this.observableLongCounterMeasurements.forEach((counterKey, reconfigurableObservableLongMeasurement) -> {
-                    LongCounterBuilder longCounterBuilder = delegate.counterBuilder(counterKey.name);
-                    Optional.ofNullable(counterKey.description).ifPresent(longCounterBuilder::setDescription);
-                    Optional.ofNullable(counterKey.unit).ifPresent(longCounterBuilder::setUnit);
-                    logger.log(Level.FINE, () -> "Reconfiguring observable long measurement " + counterKey.name);
-                    reconfigurableObservableLongMeasurement.setDelegate(longCounterBuilder.buildObserver());
-                });
+                this.observableLongCounterMeasurements.forEach(
+                        (counterKey, reconfigurableObservableLongMeasurement) -> {
+                            LongCounterBuilder longCounterBuilder = delegate.counterBuilder(counterKey.name);
+                            Optional.ofNullable(counterKey.description).ifPresent(longCounterBuilder::setDescription);
+                            Optional.ofNullable(counterKey.unit).ifPresent(longCounterBuilder::setUnit);
+                            logger.log(
+                                    Level.FINE, () -> "Reconfiguring observable long measurement " + counterKey.name);
+                            reconfigurableObservableLongMeasurement.setDelegate(longCounterBuilder.buildObserver());
+                        });
 
                 // Double counters
                 this.doubleCounters.forEach((counterKey, reconfigurableDoubleCounter) -> {
-                    DoubleCounterBuilder doubleCounterBuilder = delegate.counterBuilder(counterKey.name).ofDoubles();
+                    DoubleCounterBuilder doubleCounterBuilder =
+                            delegate.counterBuilder(counterKey.name).ofDoubles();
                     Optional.ofNullable(counterKey.description).ifPresent(doubleCounterBuilder::setDescription);
                     Optional.ofNullable(counterKey.unit).ifPresent(doubleCounterBuilder::setUnit);
                     logger.log(Level.FINE, () -> "Reconfiguring double counter " + counterKey.name);
                     reconfigurableDoubleCounter.setDelegate(doubleCounterBuilder.build());
                 });
                 this.observableDoubleCounters.forEach((callbackKey, reconfigurableObservableDoubleCounter) -> {
-                    DoubleCounterBuilder doubleCounterBuilder = delegate.counterBuilder(callbackKey.name).ofDoubles();
+                    DoubleCounterBuilder doubleCounterBuilder =
+                            delegate.counterBuilder(callbackKey.name).ofDoubles();
                     Optional.ofNullable(callbackKey.description).ifPresent(doubleCounterBuilder::setDescription);
                     Optional.ofNullable(callbackKey.unit).ifPresent(doubleCounterBuilder::setUnit);
                     logger.log(Level.FINE, () -> "Reconfiguring observable double counter " + callbackKey.name);
-                    reconfigurableObservableDoubleCounter.setDelegate(doubleCounterBuilder.buildWithCallback(callbackKey.callback));
+                    reconfigurableObservableDoubleCounter.setDelegate(
+                            doubleCounterBuilder.buildWithCallback(callbackKey.callback));
                 });
-                this.observableDoubleCounterMeasurements.forEach((counterKey, reconfigurableObservableDoubleMeasurement) -> {
-                    DoubleCounterBuilder doubleCounterBuilder = delegate.counterBuilder(counterKey.name).ofDoubles();
-                    Optional.ofNullable(counterKey.description).ifPresent(doubleCounterBuilder::setDescription);
-                    Optional.ofNullable(counterKey.unit).ifPresent(doubleCounterBuilder::setUnit);
-                    logger.log(Level.FINE, () -> "Reconfiguring observable double measurement " + counterKey.name);
-                    reconfigurableObservableDoubleMeasurement.setDelegate(doubleCounterBuilder.buildObserver());
-                });
+                this.observableDoubleCounterMeasurements.forEach(
+                        (counterKey, reconfigurableObservableDoubleMeasurement) -> {
+                            DoubleCounterBuilder doubleCounterBuilder =
+                                    delegate.counterBuilder(counterKey.name).ofDoubles();
+                            Optional.ofNullable(counterKey.description).ifPresent(doubleCounterBuilder::setDescription);
+                            Optional.ofNullable(counterKey.unit).ifPresent(doubleCounterBuilder::setUnit);
+                            logger.log(
+                                    Level.FINE, () -> "Reconfiguring observable double measurement " + counterKey.name);
+                            reconfigurableObservableDoubleMeasurement.setDelegate(doubleCounterBuilder.buildObserver());
+                        });
 
                 // GAUGES
                 // Double gauges
@@ -483,33 +584,40 @@ class ReconfigurableMeterProvider implements MeterProvider {
                     Optional.ofNullable(callbackKey.description).ifPresent(doubleGaugeBuilder::setDescription);
                     Optional.ofNullable(callbackKey.unit).ifPresent(doubleGaugeBuilder::setUnit);
                     logger.log(Level.FINE, () -> "Reconfiguring observable double gauge " + callbackKey.name);
-                    reconfigurableObservableDoubleGauge.setDelegate(doubleGaugeBuilder.buildWithCallback(callbackKey.callback));
+                    reconfigurableObservableDoubleGauge.setDelegate(
+                            doubleGaugeBuilder.buildWithCallback(callbackKey.callback));
                 });
-                this.observableDoubleGaugeMeasurements.forEach((counterKey, reconfigurableObservableDoubleMeasurement) -> {
-                    DoubleGaugeBuilder doubleGaugeBuilder = delegate.gaugeBuilder(counterKey.name);
-                    Optional.ofNullable(counterKey.description).ifPresent(doubleGaugeBuilder::setDescription);
-                    Optional.ofNullable(counterKey.unit).ifPresent(doubleGaugeBuilder::setUnit);
-                    logger.log(Level.FINE, () -> "Reconfiguring observable double measurement " + counterKey.name);
-                    reconfigurableObservableDoubleMeasurement.setDelegate(doubleGaugeBuilder.buildObserver());
-                });
+                this.observableDoubleGaugeMeasurements.forEach(
+                        (counterKey, reconfigurableObservableDoubleMeasurement) -> {
+                            DoubleGaugeBuilder doubleGaugeBuilder = delegate.gaugeBuilder(counterKey.name);
+                            Optional.ofNullable(counterKey.description).ifPresent(doubleGaugeBuilder::setDescription);
+                            Optional.ofNullable(counterKey.unit).ifPresent(doubleGaugeBuilder::setUnit);
+                            logger.log(
+                                    Level.FINE, () -> "Reconfiguring observable double measurement " + counterKey.name);
+                            reconfigurableObservableDoubleMeasurement.setDelegate(doubleGaugeBuilder.buildObserver());
+                        });
 
                 // Long gauges
                 this.longGauges.forEach((counterKey, reconfigurableLongGauge) -> {
-                    LongGaugeBuilder longGaugeBuilder = delegate.gaugeBuilder(counterKey.name).ofLongs();
+                    LongGaugeBuilder longGaugeBuilder =
+                            delegate.gaugeBuilder(counterKey.name).ofLongs();
                     Optional.ofNullable(counterKey.description).ifPresent(longGaugeBuilder::setDescription);
                     Optional.ofNullable(counterKey.unit).ifPresent(longGaugeBuilder::setUnit);
                     logger.log(Level.FINE, () -> "Reconfiguring long gauge " + counterKey.name);
                     reconfigurableLongGauge.setDelegate(longGaugeBuilder.build());
                 });
                 this.observableLongGauges.forEach((callbackKey, reconfigurableObservableLongGauge) -> {
-                    LongGaugeBuilder longGaugeBuilder = delegate.gaugeBuilder(callbackKey.name).ofLongs();
+                    LongGaugeBuilder longGaugeBuilder =
+                            delegate.gaugeBuilder(callbackKey.name).ofLongs();
                     Optional.ofNullable(callbackKey.description).ifPresent(longGaugeBuilder::setDescription);
                     Optional.ofNullable(callbackKey.unit).ifPresent(longGaugeBuilder::setUnit);
                     logger.log(Level.FINE, () -> "Reconfiguring observable long gauge " + callbackKey.name);
-                    reconfigurableObservableLongGauge.setDelegate(longGaugeBuilder.buildWithCallback(callbackKey.callback));
+                    reconfigurableObservableLongGauge.setDelegate(
+                            longGaugeBuilder.buildWithCallback(callbackKey.callback));
                 });
                 this.observableLongGaugeMeasurements.forEach((counterKey, reconfigurableObservableLongMeasurement) -> {
-                    LongGaugeBuilder longGaugeBuilder = delegate.gaugeBuilder(counterKey.name).ofLongs();
+                    LongGaugeBuilder longGaugeBuilder =
+                            delegate.gaugeBuilder(counterKey.name).ofLongs();
                     Optional.ofNullable(counterKey.description).ifPresent(longGaugeBuilder::setDescription);
                     Optional.ofNullable(counterKey.unit).ifPresent(longGaugeBuilder::setUnit);
                     logger.log(Level.FINE, () -> "Reconfiguring observable long measurement " + counterKey.name);
@@ -530,48 +638,73 @@ class ReconfigurableMeterProvider implements MeterProvider {
                     Optional.ofNullable(callbackKey.description).ifPresent(longUpDownCounterBuilder::setDescription);
                     Optional.ofNullable(callbackKey.unit).ifPresent(longUpDownCounterBuilder::setUnit);
                     logger.log(Level.FINE, () -> "Reconfiguring observable long updown counter " + callbackKey.name);
-                    reconfigurableObservableLongUpDownCounter.setDelegate(longUpDownCounterBuilder.buildWithCallback(callbackKey.callback));
+                    reconfigurableObservableLongUpDownCounter.setDelegate(
+                            longUpDownCounterBuilder.buildWithCallback(callbackKey.callback));
                 });
-                this.observableLongUpDownCounterMeasurements.forEach((counterKey, reconfigurableObservableLongMeasurement) -> {
-                    LongUpDownCounterBuilder longUpDownCounterBuilder = delegate.upDownCounterBuilder(counterKey.name);
-                    Optional.ofNullable(counterKey.description).ifPresent(longUpDownCounterBuilder::setDescription);
-                    Optional.ofNullable(counterKey.unit).ifPresent(longUpDownCounterBuilder::setUnit);
-                    logger.log(Level.FINE, () -> "Reconfiguring observable long updown measurement " + counterKey.name);
-                    reconfigurableObservableLongMeasurement.setDelegate(longUpDownCounterBuilder.buildObserver());
-                });
+                this.observableLongUpDownCounterMeasurements.forEach(
+                        (counterKey, reconfigurableObservableLongMeasurement) -> {
+                            LongUpDownCounterBuilder longUpDownCounterBuilder =
+                                    delegate.upDownCounterBuilder(counterKey.name);
+                            Optional.ofNullable(counterKey.description)
+                                    .ifPresent(longUpDownCounterBuilder::setDescription);
+                            Optional.ofNullable(counterKey.unit).ifPresent(longUpDownCounterBuilder::setUnit);
+                            logger.log(
+                                    Level.FINE,
+                                    () -> "Reconfiguring observable long updown measurement " + counterKey.name);
+                            reconfigurableObservableLongMeasurement.setDelegate(
+                                    longUpDownCounterBuilder.buildObserver());
+                        });
 
                 // Double updown counters
                 this.doubleUpDownCounters.forEach((counterKey, reconfigurableDoubleUpDownCounter) -> {
-                    DoubleUpDownCounterBuilder doubleUpDownCounterBuilder = delegate.upDownCounterBuilder(counterKey.name).ofDoubles();
+                    DoubleUpDownCounterBuilder doubleUpDownCounterBuilder =
+                            delegate.upDownCounterBuilder(counterKey.name).ofDoubles();
                     Optional.ofNullable(counterKey.description).ifPresent(doubleUpDownCounterBuilder::setDescription);
                     Optional.ofNullable(counterKey.unit).ifPresent(doubleUpDownCounterBuilder::setUnit);
                     logger.log(Level.FINE, () -> "Reconfiguring double updown counter " + counterKey.name);
                     reconfigurableDoubleUpDownCounter.setDelegate(doubleUpDownCounterBuilder.build());
                 });
-                this.observableDoubleUpDownCounters.forEach((callbackKey, reconfigurableObservableDoubleUpDownCounter) -> {
-                    DoubleUpDownCounterBuilder doubleUpDownCounterBuilder = delegate.upDownCounterBuilder(callbackKey.name).ofDoubles();
-                    Optional.ofNullable(callbackKey.description).ifPresent(doubleUpDownCounterBuilder::setDescription);
-                    Optional.ofNullable(callbackKey.unit).ifPresent(doubleUpDownCounterBuilder::setUnit);
-                    logger.log(Level.FINE, () -> "Reconfiguring observable double updown counter " + callbackKey.name);
-                    reconfigurableObservableDoubleUpDownCounter.setDelegate(doubleUpDownCounterBuilder.buildWithCallback(callbackKey.callback));
-                });
-                this.observableDoubleUpDownCounterMeasurements.forEach((counterKey, reconfigurableObservableDoubleMeasurement) -> {
-                    DoubleUpDownCounterBuilder doubleUpDownCounterBuilder = delegate.upDownCounterBuilder(counterKey.name).ofDoubles();
-                    Optional.ofNullable(counterKey.description).ifPresent(doubleUpDownCounterBuilder::setDescription);
-                    Optional.ofNullable(counterKey.unit).ifPresent(doubleUpDownCounterBuilder::setUnit);
-                    logger.log(Level.FINE, () -> "Reconfiguring observable double updown measurement " + counterKey.name);
-                    reconfigurableObservableDoubleMeasurement.setDelegate(doubleUpDownCounterBuilder.buildObserver());
-                });
+                this.observableDoubleUpDownCounters.forEach(
+                        (callbackKey, reconfigurableObservableDoubleUpDownCounter) -> {
+                            DoubleUpDownCounterBuilder doubleUpDownCounterBuilder = delegate.upDownCounterBuilder(
+                                            callbackKey.name)
+                                    .ofDoubles();
+                            Optional.ofNullable(callbackKey.description)
+                                    .ifPresent(doubleUpDownCounterBuilder::setDescription);
+                            Optional.ofNullable(callbackKey.unit).ifPresent(doubleUpDownCounterBuilder::setUnit);
+                            logger.log(
+                                    Level.FINE,
+                                    () -> "Reconfiguring observable double updown counter " + callbackKey.name);
+                            reconfigurableObservableDoubleUpDownCounter.setDelegate(
+                                    doubleUpDownCounterBuilder.buildWithCallback(callbackKey.callback));
+                        });
+                this.observableDoubleUpDownCounterMeasurements.forEach(
+                        (counterKey, reconfigurableObservableDoubleMeasurement) -> {
+                            DoubleUpDownCounterBuilder doubleUpDownCounterBuilder = delegate.upDownCounterBuilder(
+                                            counterKey.name)
+                                    .ofDoubles();
+                            Optional.ofNullable(counterKey.description)
+                                    .ifPresent(doubleUpDownCounterBuilder::setDescription);
+                            Optional.ofNullable(counterKey.unit).ifPresent(doubleUpDownCounterBuilder::setUnit);
+                            logger.log(
+                                    Level.FINE,
+                                    () -> "Reconfiguring observable double updown measurement " + counterKey.name);
+                            reconfigurableObservableDoubleMeasurement.setDelegate(
+                                    doubleUpDownCounterBuilder.buildObserver());
+                        });
 
                 // HISTOGRAMS
                 // Long histograms
                 this.longHistograms.forEach((histogramKey, reconfigurableLongHistogram) -> {
-                    LongHistogramBuilder longHistogramBuilder = delegate.histogramBuilder(histogramKey.name).ofLongs();
+                    LongHistogramBuilder longHistogramBuilder =
+                            delegate.histogramBuilder(histogramKey.name).ofLongs();
                     Optional.ofNullable(histogramKey.description).ifPresent(longHistogramBuilder::setDescription);
                     Optional.ofNullable(histogramKey.unit).ifPresent(longHistogramBuilder::setUnit);
-                    Optional.ofNullable(histogramKey.bucketBoundaries).ifPresent(longHistogramBuilder::setExplicitBucketBoundariesAdvice);
+                    Optional.ofNullable(histogramKey.bucketBoundaries)
+                            .ifPresent(longHistogramBuilder::setExplicitBucketBoundariesAdvice);
                     if (longHistogramBuilder instanceof ExtendedLongHistogramBuilder) {
-                        Optional.ofNullable(histogramKey.attributes).ifPresent(((ExtendedLongHistogramBuilder) longHistogramBuilder)::setAttributesAdvice);
+                        Optional.ofNullable(histogramKey.attributes)
+                                .ifPresent(((ExtendedLongHistogramBuilder) longHistogramBuilder)::setAttributesAdvice);
                     }
                     logger.log(Level.FINE, () -> "Reconfiguring long histogram " + histogramKey.name);
                     reconfigurableLongHistogram.setDelegate(longHistogramBuilder.build());
@@ -581,9 +714,11 @@ class ReconfigurableMeterProvider implements MeterProvider {
                     DoubleHistogramBuilder doubleHistogramBuilder = delegate.histogramBuilder(counterKey.name);
                     Optional.ofNullable(counterKey.description).ifPresent(doubleHistogramBuilder::setDescription);
                     Optional.ofNullable(counterKey.unit).ifPresent(doubleHistogramBuilder::setUnit);
-                    Optional.ofNullable(counterKey.bucketBoundaries).ifPresent(doubleHistogramBuilder::setExplicitBucketBoundariesAdvice);
+                    Optional.ofNullable(counterKey.bucketBoundaries)
+                            .ifPresent(doubleHistogramBuilder::setExplicitBucketBoundariesAdvice);
                     if (doubleHistogramBuilder instanceof ExtendedDoubleHistogramBuilder) {
-                        Optional.ofNullable(counterKey.attributes).ifPresent(((ExtendedDoubleHistogramBuilder) doubleHistogramBuilder)::setAttributesAdvice);
+                        Optional.ofNullable(counterKey.attributes).ifPresent(((ExtendedDoubleHistogramBuilder)
+                                doubleHistogramBuilder)::setAttributesAdvice);
                     }
                     logger.log(Level.FINE, () -> "Reconfiguring double histogram " + counterKey.name);
                     reconfigurableDoubleHistogram.setDelegate(doubleHistogramBuilder.build());
@@ -593,17 +728,31 @@ class ReconfigurableMeterProvider implements MeterProvider {
                 this.batchCallbacks.forEach((batchCallbackKey, reconfigurableBatchCallback) -> {
 
                     // close previous call back to prevent
-                    // "WARNING	i.o.s.internal.ThrottlingLogger#doLog: Instrument xyz has recorded multiple values for the same attributes: {...}"
+                    // "WARNING	i.o.s.internal.ThrottlingLogger#doLog: Instrument xyz has recorded multiple values for
+                    // the same attributes: {...}"
                     reconfigurableBatchCallback.close();
 
                     // io.opentelemetry.sdk.metrics.SdkMeter.batchCallback require the original ObservableMeasurement
-                    // see https://github.com/open-telemetry/opentelemetry-java/blob/v1.39.0/sdk/metrics/src/main/java/io/opentelemetry/sdk/metrics/SdkMeter.java#L130
+                    // see
+                    // https://github.com/open-telemetry/opentelemetry-java/blob/v1.39.0/sdk/metrics/src/main/java/io/opentelemetry/sdk/metrics/SdkMeter.java#L130
 
-                    ObservableMeasurement originalObservableMeasurement = ((ReconfigurableObservableMeasurement<?>) batchCallbackKey.observableMeasurement).getDelegate();
-                    ObservableMeasurement[] originalAdditionalMeasurements = Arrays.stream(batchCallbackKey.additionalObservableMeasurements).map(additionalMeasurement -> ((ReconfigurableObservableMeasurement<? extends ObservableMeasurement>) additionalMeasurement).getDelegate()).toArray(ObservableMeasurement[]::new);
+                    ObservableMeasurement originalObservableMeasurement = ((ReconfigurableObservableMeasurement<?>)
+                                    batchCallbackKey.observableMeasurement)
+                            .getDelegate();
+                    ObservableMeasurement[] originalAdditionalMeasurements = Arrays.stream(
+                                    batchCallbackKey.additionalObservableMeasurements)
+                            .map(additionalMeasurement -> ((ReconfigurableObservableMeasurement<
+                                                    ? extends ObservableMeasurement>)
+                                            additionalMeasurement)
+                                    .getDelegate())
+                            .toArray(ObservableMeasurement[]::new);
 
-                    logger.log(Level.FINE, () -> "Reconfiguring batch callback " + batchCallbackKey.observableMeasurement + " " + Arrays.toString(batchCallbackKey.additionalObservableMeasurements));
-                    reconfigurableBatchCallback.setDelegate(delegate.batchCallback(batchCallbackKey.callback, originalObservableMeasurement, originalAdditionalMeasurements));
+                    logger.log(
+                            Level.FINE,
+                            () -> "Reconfiguring batch callback " + batchCallbackKey.observableMeasurement + " "
+                                    + Arrays.toString(batchCallbackKey.additionalObservableMeasurements));
+                    reconfigurableBatchCallback.setDelegate(delegate.batchCallback(
+                            batchCallbackKey.callback, originalObservableMeasurement, originalAdditionalMeasurements));
                 });
             } finally {
                 lock.writeLock().unlock();
@@ -621,7 +770,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
     }
 
     @VisibleForTesting
-    protected static class ReconfigurableObservableLongMeasurement implements ObservableLongMeasurement, ReconfigurableObservableMeasurement<ObservableLongMeasurement> {
+    protected static class ReconfigurableObservableLongMeasurement
+            implements ObservableLongMeasurement, ReconfigurableObservableMeasurement<ObservableLongMeasurement> {
         final ReadWriteLock lock;
         private ObservableLongMeasurement delegate;
 
@@ -672,9 +822,7 @@ class ReconfigurableMeterProvider implements MeterProvider {
 
         @Override
         public String toString() {
-            return "ReconfigurableObservableLongMeasurement{" +
-                "delegate=" + delegate +
-                '}';
+            return "ReconfigurableObservableLongMeasurement{" + "delegate=" + delegate + '}';
         }
     }
 
@@ -682,25 +830,30 @@ class ReconfigurableMeterProvider implements MeterProvider {
         final ReadWriteLock lock;
         LongCounterBuilder delegate;
         final ConcurrentMap<InstrumentKey, ReconfigurableLongCounter> longCounters;
-        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongCounter> observableLongCounters;
+        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongCounter>
+                observableLongCounters;
         final ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongMeasurements;
         final ConcurrentMap<InstrumentKey, ReconfigurableDoubleCounter> doubleCounters;
-        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleCounter> observableDoubleCounters;
+        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleCounter>
+                observableDoubleCounters;
         final ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements;
 
         final String name;
         String description;
         String unit;
 
-
-        ReconfigurableLongCounterBuilder(LongCounterBuilder delegate, String name,
-                                         ConcurrentMap<InstrumentKey, ReconfigurableLongCounter> longCounters,
-                                         ConcurrentMap<InstrumentKey, ReconfigurableDoubleCounter> doubleCounters,
-                                         ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongCounter> observableLongCounters,
-                                         ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongMeasurements,
-                                         ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleCounter> observableDoubleCounters,
-                                         ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements,
-                                         ReadWriteLock lock) {
+        ReconfigurableLongCounterBuilder(
+                LongCounterBuilder delegate,
+                String name,
+                ConcurrentMap<InstrumentKey, ReconfigurableLongCounter> longCounters,
+                ConcurrentMap<InstrumentKey, ReconfigurableDoubleCounter> doubleCounters,
+                ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongCounter>
+                        observableLongCounters,
+                ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongMeasurements,
+                ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleCounter>
+                        observableDoubleCounters,
+                ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements,
+                ReadWriteLock lock) {
             this.delegate = delegate;
             this.name = name;
             this.longCounters = longCounters;
@@ -741,7 +894,14 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public DoubleCounterBuilder ofDoubles() {
             lock.readLock().lock();
             try {
-                ReconfigurableDoubleCounterBuilder reconfigurableDoubleCounterBuilder = new ReconfigurableDoubleCounterBuilder(delegate.ofDoubles(), name, doubleCounters, observableDoubleCounters, observableDoubleMeasurements, lock);
+                ReconfigurableDoubleCounterBuilder reconfigurableDoubleCounterBuilder =
+                        new ReconfigurableDoubleCounterBuilder(
+                                delegate.ofDoubles(),
+                                name,
+                                doubleCounters,
+                                observableDoubleCounters,
+                                observableDoubleMeasurements,
+                                lock);
                 Optional.ofNullable(description).ifPresent(reconfigurableDoubleCounterBuilder::setDescription);
                 Optional.ofNullable(unit).ifPresent(reconfigurableDoubleCounterBuilder::setUnit);
                 return reconfigurableDoubleCounterBuilder;
@@ -755,7 +915,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 InstrumentKey counterKey = new InstrumentKey(name, description, unit);
-                return longCounters.computeIfAbsent(counterKey, k -> new ReconfigurableLongCounter(delegate.build(), lock));
+                return longCounters.computeIfAbsent(
+                        counterKey, k -> new ReconfigurableLongCounter(delegate.build(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -765,8 +926,10 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public ObservableLongCounter buildWithCallback(Consumer<ObservableLongMeasurement> callback) {
             lock.readLock().lock();
             try {
-                ObservableLongMeasurementCallbackKey key = new ObservableLongMeasurementCallbackKey(name, description, unit, callback);
-                return this.observableLongCounters.computeIfAbsent(key, k -> new ReconfigurableObservableLongCounter(delegate.buildWithCallback(callback), lock));
+                ObservableLongMeasurementCallbackKey key =
+                        new ObservableLongMeasurementCallbackKey(name, description, unit, callback);
+                return this.observableLongCounters.computeIfAbsent(
+                        key, k -> new ReconfigurableObservableLongCounter(delegate.buildWithCallback(callback), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -777,7 +940,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 InstrumentKey counterKey = new InstrumentKey(name, description, unit);
-                return this.observableLongMeasurements.computeIfAbsent(counterKey, k -> new ReconfigurableObservableLongMeasurement(delegate.buildObserver(), lock));
+                return this.observableLongMeasurements.computeIfAbsent(
+                        counterKey, k -> new ReconfigurableObservableLongMeasurement(delegate.buildObserver(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -788,6 +952,7 @@ class ReconfigurableMeterProvider implements MeterProvider {
     @ThreadSafe
     protected static class ReconfigurableLongCounter implements ExtendedLongCounter {
         final ReadWriteLock lock;
+
         @GuardedBy("lock")
         private LongCounter delegate;
 
@@ -888,24 +1053,27 @@ class ReconfigurableMeterProvider implements MeterProvider {
                 lock.readLock().unlock();
             }
         }
-
     }
 
     static class ReconfigurableDoubleCounterBuilder implements DoubleCounterBuilder {
         final ReadWriteLock lock;
         DoubleCounterBuilder delegate;
         final ConcurrentMap<InstrumentKey, ReconfigurableDoubleCounter> doubleCounters;
-        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleCounter> observableDoubleCounters;
+        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleCounter>
+                observableDoubleCounters;
         final ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements;
         final String name;
         String description;
         String unit;
 
-        ReconfigurableDoubleCounterBuilder(DoubleCounterBuilder delegate, String name,
-                                           ConcurrentMap<InstrumentKey, ReconfigurableDoubleCounter> doubleCounters,
-                                           ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleCounter> observableDoubleCounters,
-                                           ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements,
-                                           ReadWriteLock lock) {
+        ReconfigurableDoubleCounterBuilder(
+                DoubleCounterBuilder delegate,
+                String name,
+                ConcurrentMap<InstrumentKey, ReconfigurableDoubleCounter> doubleCounters,
+                ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleCounter>
+                        observableDoubleCounters,
+                ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements,
+                ReadWriteLock lock) {
             this.delegate = delegate;
             this.name = name;
             this.doubleCounters = doubleCounters;
@@ -943,7 +1111,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 InstrumentKey counterKey = new InstrumentKey(name, description, unit);
-                return doubleCounters.computeIfAbsent(counterKey, k -> new ReconfigurableDoubleCounter(delegate.build(), lock));
+                return doubleCounters.computeIfAbsent(
+                        counterKey, k -> new ReconfigurableDoubleCounter(delegate.build(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -953,8 +1122,11 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public ObservableDoubleCounter buildWithCallback(Consumer<ObservableDoubleMeasurement> callback) {
             lock.readLock().lock();
             try {
-                ObservableDoubleMeasurementCallbackKey key = new ObservableDoubleMeasurementCallbackKey(name, description, unit, callback);
-                return this.observableDoubleCounters.computeIfAbsent(key, k -> new ReconfigurableObservableDoubleCounter(delegate.buildWithCallback(callback), lock));
+                ObservableDoubleMeasurementCallbackKey key =
+                        new ObservableDoubleMeasurementCallbackKey(name, description, unit, callback);
+                return this.observableDoubleCounters.computeIfAbsent(
+                        key,
+                        k -> new ReconfigurableObservableDoubleCounter(delegate.buildWithCallback(callback), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -965,7 +1137,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 InstrumentKey key = new InstrumentKey(name, description, unit);
-                return this.observableDoubleMeasurements.computeIfAbsent(key, k -> new ReconfigurableObservableDoubleMeasurement(delegate.buildObserver(), lock));
+                return this.observableDoubleMeasurements.computeIfAbsent(
+                        key, k -> new ReconfigurableObservableDoubleMeasurement(delegate.buildObserver(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -1014,6 +1187,7 @@ class ReconfigurableMeterProvider implements MeterProvider {
     @ThreadSafe
     protected static class ReconfigurableDoubleCounter implements ExtendedDoubleCounter {
         final ReadWriteLock lock;
+
         @GuardedBy("lock")
         private DoubleCounter delegate;
 
@@ -1086,15 +1260,16 @@ class ReconfigurableMeterProvider implements MeterProvider {
         }
     }
 
-
     static class ReconfigurableDoubleGaugeBuilder implements DoubleGaugeBuilder {
         final ReadWriteLock lock;
         DoubleGaugeBuilder delegate;
         final ConcurrentMap<InstrumentKey, ReconfigurableDoubleGauge> doubleGauges;
-        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleGauge> observableDoubleGauges;
+        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleGauge>
+                observableDoubleGauges;
         final ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements;
         final ConcurrentMap<InstrumentKey, ReconfigurableLongGauge> longGauges;
-        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongGauge> observableLongGauges;
+        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongGauge>
+                observableLongGauges;
         final ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongMeasurements;
 
         final String name;
@@ -1102,11 +1277,17 @@ class ReconfigurableMeterProvider implements MeterProvider {
         String unit;
 
         ReconfigurableDoubleGaugeBuilder(
-            DoubleGaugeBuilder delegate, String name, ConcurrentMap<InstrumentKey,
-            ReconfigurableDoubleGauge> doubleGauges,
-            ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleGauge> observableDoubleGauges, ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements, ConcurrentMap<InstrumentKey, ReconfigurableLongGauge> longGauges, ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongGauge> observableLongGauges,
-            ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongMeasurements,
-            ReadWriteLock lock) {
+                DoubleGaugeBuilder delegate,
+                String name,
+                ConcurrentMap<InstrumentKey, ReconfigurableDoubleGauge> doubleGauges,
+                ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleGauge>
+                        observableDoubleGauges,
+                ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements,
+                ConcurrentMap<InstrumentKey, ReconfigurableLongGauge> longGauges,
+                ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongGauge>
+                        observableLongGauges,
+                ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongMeasurements,
+                ReadWriteLock lock) {
 
             this.delegate = delegate;
             this.name = name;
@@ -1148,7 +1329,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public LongGaugeBuilder ofLongs() {
             lock.readLock().lock();
             try {
-                ReconfigurableLongGaugeBuilder reconfigurableLongCounterBuilder = new ReconfigurableLongGaugeBuilder(delegate.ofLongs(), name, longGauges, observableLongGauges, observableLongMeasurements, lock);
+                ReconfigurableLongGaugeBuilder reconfigurableLongCounterBuilder = new ReconfigurableLongGaugeBuilder(
+                        delegate.ofLongs(), name, longGauges, observableLongGauges, observableLongMeasurements, lock);
                 Optional.ofNullable(description).ifPresent(reconfigurableLongCounterBuilder::setDescription);
                 Optional.ofNullable(unit).ifPresent(reconfigurableLongCounterBuilder::setUnit);
                 return reconfigurableLongCounterBuilder;
@@ -1162,7 +1344,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 InstrumentKey gaugeKey = new InstrumentKey(name, description, unit);
-                return doubleGauges.computeIfAbsent(gaugeKey, k -> new ReconfigurableDoubleGauge(delegate.build(), lock));
+                return doubleGauges.computeIfAbsent(
+                        gaugeKey, k -> new ReconfigurableDoubleGauge(delegate.build(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -1172,8 +1355,10 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public ObservableDoubleGauge buildWithCallback(Consumer<ObservableDoubleMeasurement> callback) {
             lock.readLock().lock();
             try {
-                ObservableDoubleMeasurementCallbackKey key = new ObservableDoubleMeasurementCallbackKey(name, description, unit, callback);
-                return this.observableDoubleGauges.computeIfAbsent(key, k -> new ReconfigurableObservableDoubleGauge(delegate.buildWithCallback(callback), lock));
+                ObservableDoubleMeasurementCallbackKey key =
+                        new ObservableDoubleMeasurementCallbackKey(name, description, unit, callback);
+                return this.observableDoubleGauges.computeIfAbsent(
+                        key, k -> new ReconfigurableObservableDoubleGauge(delegate.buildWithCallback(callback), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -1184,31 +1369,34 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 InstrumentKey gaugeKey = new InstrumentKey(name, description, unit);
-                return this.observableDoubleMeasurements.computeIfAbsent(gaugeKey, k -> new ReconfigurableObservableDoubleMeasurement(delegate.buildObserver(), lock));
+                return this.observableDoubleMeasurements.computeIfAbsent(
+                        gaugeKey, k -> new ReconfigurableObservableDoubleMeasurement(delegate.buildObserver(), lock));
             } finally {
                 lock.readLock().unlock();
             }
         }
-
     }
 
     static class ReconfigurableLongGaugeBuilder implements LongGaugeBuilder {
         final ReadWriteLock lock;
         LongGaugeBuilder delegate;
         final ConcurrentMap<InstrumentKey, ReconfigurableLongGauge> longGauges;
-        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongGauge> observableLongGauges;
+        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongGauge>
+                observableLongGauges;
         final ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongMeasurements;
 
         final String name;
         String description;
         String unit;
 
-
-        ReconfigurableLongGaugeBuilder(LongGaugeBuilder delegate, String name,
-                                       ConcurrentMap<InstrumentKey, ReconfigurableLongGauge> longGauges,
-                                       ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongGauge> observableLongGauges,
-                                       ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongMeasurements,
-                                       ReadWriteLock lock) {
+        ReconfigurableLongGaugeBuilder(
+                LongGaugeBuilder delegate,
+                String name,
+                ConcurrentMap<InstrumentKey, ReconfigurableLongGauge> longGauges,
+                ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongGauge>
+                        observableLongGauges,
+                ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongMeasurements,
+                ReadWriteLock lock) {
             this.delegate = delegate;
             this.name = name;
             this.longGauges = longGauges;
@@ -1257,8 +1445,10 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public ObservableLongGauge buildWithCallback(Consumer<ObservableLongMeasurement> callback) {
             lock.readLock().lock();
             try {
-                ObservableLongMeasurementCallbackKey key = new ObservableLongMeasurementCallbackKey(name, description, unit, callback);
-                return this.observableLongGauges.computeIfAbsent(key, k -> new ReconfigurableObservableLongGauge(delegate.buildWithCallback(callback), lock));
+                ObservableLongMeasurementCallbackKey key =
+                        new ObservableLongMeasurementCallbackKey(name, description, unit, callback);
+                return this.observableLongGauges.computeIfAbsent(
+                        key, k -> new ReconfigurableObservableLongGauge(delegate.buildWithCallback(callback), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -1269,7 +1459,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 InstrumentKey counterKey = new InstrumentKey(name, description, unit);
-                return this.observableLongMeasurements.computeIfAbsent(counterKey, k -> new ReconfigurableObservableLongMeasurement(delegate.buildObserver(), lock));
+                return this.observableLongMeasurements.computeIfAbsent(
+                        counterKey, k -> new ReconfigurableObservableLongMeasurement(delegate.buildObserver(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -1280,6 +1471,7 @@ class ReconfigurableMeterProvider implements MeterProvider {
     @ThreadSafe
     protected static class ReconfigurableLongGauge implements LongGauge {
         final ReadWriteLock lock;
+
         @GuardedBy("lock")
         private LongGauge delegate;
 
@@ -1371,6 +1563,7 @@ class ReconfigurableMeterProvider implements MeterProvider {
     @ThreadSafe
     protected static class ReconfigurableDoubleGauge implements DoubleGauge {
         final ReadWriteLock lock;
+
         @GuardedBy("lock")
         private DoubleGauge delegate;
 
@@ -1459,7 +1652,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
     }
 
     @VisibleForTesting
-    protected static class ReconfigurableObservableDoubleMeasurement implements ObservableDoubleMeasurement, ReconfigurableObservableMeasurement<ObservableDoubleMeasurement> {
+    protected static class ReconfigurableObservableDoubleMeasurement
+            implements ObservableDoubleMeasurement, ReconfigurableObservableMeasurement<ObservableDoubleMeasurement> {
         final ReadWriteLock lock;
         private ObservableDoubleMeasurement delegate;
 
@@ -1513,6 +1707,7 @@ class ReconfigurableMeterProvider implements MeterProvider {
     @ThreadSafe
     protected static class ReconfigurableLongUpDownCounter implements LongUpDownCounter {
         final ReadWriteLock lock;
+
         @GuardedBy("lock")
         private LongUpDownCounter delegate;
 
@@ -1574,6 +1769,7 @@ class ReconfigurableMeterProvider implements MeterProvider {
     @ThreadSafe
     protected static class ReconfigurableDoubleUpDownCounter implements DoubleUpDownCounter {
         final ReadWriteLock lock;
+
         @GuardedBy("lock")
         private DoubleUpDownCounter delegate;
 
@@ -1635,25 +1831,30 @@ class ReconfigurableMeterProvider implements MeterProvider {
         final ReadWriteLock lock;
         LongUpDownCounterBuilder delegate;
         final ConcurrentMap<InstrumentKey, ReconfigurableLongUpDownCounter> longUpDownCounters;
-        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongUpDownCounter> observableLongUpDownCounters;
+        final ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongUpDownCounter>
+                observableLongUpDownCounters;
         final ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongMeasurements;
         final ConcurrentMap<InstrumentKey, ReconfigurableDoubleUpDownCounter> doubleUpDownCounters;
-        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleUpDownCounter> observableDoubleUpDownCounters;
+        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleUpDownCounter>
+                observableDoubleUpDownCounters;
         final ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements;
 
         final String name;
         String description;
         String unit;
 
-
-        ReconfigurableLongUpDownCounterBuilder(LongUpDownCounterBuilder delegate, String name,
-                                               ConcurrentMap<InstrumentKey, ReconfigurableLongUpDownCounter> longUpDownCounters,
-                                               ConcurrentMap<InstrumentKey, ReconfigurableDoubleUpDownCounter> doubleUpDownCounters,
-                                               ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongUpDownCounter> observableLongUpDownCounters,
-                                               ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongMeasurements,
-                                               ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleUpDownCounter> observableDoubleUpDownCounters,
-                                               ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements,
-                                               ReadWriteLock lock) {
+        ReconfigurableLongUpDownCounterBuilder(
+                LongUpDownCounterBuilder delegate,
+                String name,
+                ConcurrentMap<InstrumentKey, ReconfigurableLongUpDownCounter> longUpDownCounters,
+                ConcurrentMap<InstrumentKey, ReconfigurableDoubleUpDownCounter> doubleUpDownCounters,
+                ConcurrentMap<ObservableLongMeasurementCallbackKey, ReconfigurableObservableLongUpDownCounter>
+                        observableLongUpDownCounters,
+                ConcurrentMap<InstrumentKey, ReconfigurableObservableLongMeasurement> observableLongMeasurements,
+                ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleUpDownCounter>
+                        observableDoubleUpDownCounters,
+                ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements,
+                ReadWriteLock lock) {
             this.delegate = delegate;
             this.name = name;
             this.longUpDownCounters = longUpDownCounters;
@@ -1694,7 +1895,14 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public DoubleUpDownCounterBuilder ofDoubles() {
             lock.readLock().lock();
             try {
-                ReconfigurableDoubleUpDownCounterBuilder reconfigurableDoubleCounterBuilder = new ReconfigurableDoubleUpDownCounterBuilder(delegate.ofDoubles(), name, doubleUpDownCounters, observableDoubleUpDownCounters, observableDoubleMeasurements, lock);
+                ReconfigurableDoubleUpDownCounterBuilder reconfigurableDoubleCounterBuilder =
+                        new ReconfigurableDoubleUpDownCounterBuilder(
+                                delegate.ofDoubles(),
+                                name,
+                                doubleUpDownCounters,
+                                observableDoubleUpDownCounters,
+                                observableDoubleMeasurements,
+                                lock);
                 Optional.ofNullable(description).ifPresent(reconfigurableDoubleCounterBuilder::setDescription);
                 Optional.ofNullable(unit).ifPresent(reconfigurableDoubleCounterBuilder::setUnit);
                 return reconfigurableDoubleCounterBuilder;
@@ -1708,7 +1916,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 InstrumentKey counterKey = new InstrumentKey(name, description, unit);
-                return longUpDownCounters.computeIfAbsent(counterKey, k -> new ReconfigurableLongUpDownCounter(delegate.build(), lock));
+                return longUpDownCounters.computeIfAbsent(
+                        counterKey, k -> new ReconfigurableLongUpDownCounter(delegate.build(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -1718,8 +1927,11 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public ObservableLongUpDownCounter buildWithCallback(Consumer<ObservableLongMeasurement> callback) {
             lock.readLock().lock();
             try {
-                ObservableLongMeasurementCallbackKey key = new ObservableLongMeasurementCallbackKey(name, description, unit, callback);
-                return this.observableLongUpDownCounters.computeIfAbsent(key, k -> new ReconfigurableObservableLongUpDownCounter(delegate.buildWithCallback(callback), lock));
+                ObservableLongMeasurementCallbackKey key =
+                        new ObservableLongMeasurementCallbackKey(name, description, unit, callback);
+                return this.observableLongUpDownCounters.computeIfAbsent(
+                        key,
+                        k -> new ReconfigurableObservableLongUpDownCounter(delegate.buildWithCallback(callback), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -1730,7 +1942,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 InstrumentKey counterKey = new InstrumentKey(name, description, unit);
-                return this.observableLongMeasurements.computeIfAbsent(counterKey, k -> new ReconfigurableObservableLongMeasurement(delegate.buildObserver(), lock));
+                return this.observableLongMeasurements.computeIfAbsent(
+                        counterKey, k -> new ReconfigurableObservableLongMeasurement(delegate.buildObserver(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -1809,17 +2022,21 @@ class ReconfigurableMeterProvider implements MeterProvider {
         final ReadWriteLock lock;
         DoubleUpDownCounterBuilder delegate;
         final ConcurrentMap<InstrumentKey, ReconfigurableDoubleUpDownCounter> doubleUpDownCounters;
-        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleUpDownCounter> observableDoubleUpDownCounters;
+        final ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleUpDownCounter>
+                observableDoubleUpDownCounters;
         final ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements;
         final String name;
         String description;
         String unit;
 
-        ReconfigurableDoubleUpDownCounterBuilder(DoubleUpDownCounterBuilder delegate, String name,
-                                                 ConcurrentMap<InstrumentKey, ReconfigurableDoubleUpDownCounter> doubleUpDownCounters,
-                                                 ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleUpDownCounter> observableDoubleUpDownCounters,
-                                                 ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements,
-                                                 ReadWriteLock lock) {
+        ReconfigurableDoubleUpDownCounterBuilder(
+                DoubleUpDownCounterBuilder delegate,
+                String name,
+                ConcurrentMap<InstrumentKey, ReconfigurableDoubleUpDownCounter> doubleUpDownCounters,
+                ConcurrentMap<ObservableDoubleMeasurementCallbackKey, ReconfigurableObservableDoubleUpDownCounter>
+                        observableDoubleUpDownCounters,
+                ConcurrentMap<InstrumentKey, ReconfigurableObservableDoubleMeasurement> observableDoubleMeasurements,
+                ReadWriteLock lock) {
             this.delegate = delegate;
             this.name = name;
             this.doubleUpDownCounters = doubleUpDownCounters;
@@ -1857,7 +2074,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 InstrumentKey counterKey = new InstrumentKey(name, description, unit);
-                return doubleUpDownCounters.computeIfAbsent(counterKey, k -> new ReconfigurableDoubleUpDownCounter(delegate.build(), lock));
+                return doubleUpDownCounters.computeIfAbsent(
+                        counterKey, k -> new ReconfigurableDoubleUpDownCounter(delegate.build(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -1867,8 +2085,12 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public ObservableDoubleUpDownCounter buildWithCallback(Consumer<ObservableDoubleMeasurement> callback) {
             lock.readLock().lock();
             try {
-                ObservableDoubleMeasurementCallbackKey key = new ObservableDoubleMeasurementCallbackKey(name, description, unit, callback);
-                return this.observableDoubleUpDownCounters.computeIfAbsent(key, k -> new ReconfigurableObservableDoubleUpDownCounter(delegate.buildWithCallback(callback), lock));
+                ObservableDoubleMeasurementCallbackKey key =
+                        new ObservableDoubleMeasurementCallbackKey(name, description, unit, callback);
+                return this.observableDoubleUpDownCounters.computeIfAbsent(
+                        key,
+                        k -> new ReconfigurableObservableDoubleUpDownCounter(
+                                delegate.buildWithCallback(callback), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -1879,7 +2101,8 @@ class ReconfigurableMeterProvider implements MeterProvider {
             lock.readLock().lock();
             try {
                 InstrumentKey key = new InstrumentKey(name, description, unit);
-                return this.observableDoubleMeasurements.computeIfAbsent(key, k -> new ReconfigurableObservableDoubleMeasurement(delegate.buildObserver(), lock));
+                return this.observableDoubleMeasurements.computeIfAbsent(
+                        key, k -> new ReconfigurableObservableDoubleMeasurement(delegate.buildObserver(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -1920,7 +2143,10 @@ class ReconfigurableMeterProvider implements MeterProvider {
         final ObservableMeasurement observableMeasurement;
         final ObservableMeasurement[] additionalObservableMeasurements;
 
-        public BatchCallbackKey(Runnable callback, ObservableMeasurement observableMeasurement, ObservableMeasurement... additionalObservableMeasurements) {
+        public BatchCallbackKey(
+                Runnable callback,
+                ObservableMeasurement observableMeasurement,
+                ObservableMeasurement... additionalObservableMeasurements) {
             this.callback = callback;
             this.observableMeasurement = Objects.requireNonNull(observableMeasurement);
             this.additionalObservableMeasurements = Objects.requireNonNull(additionalObservableMeasurements);
@@ -1931,7 +2157,9 @@ class ReconfigurableMeterProvider implements MeterProvider {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             BatchCallbackKey that = (BatchCallbackKey) o;
-            return Objects.equals(callback, that.callback) && Objects.equals(observableMeasurement, that.observableMeasurement) && Objects.deepEquals(additionalObservableMeasurements, that.additionalObservableMeasurements);
+            return Objects.equals(callback, that.callback)
+                    && Objects.equals(observableMeasurement, that.observableMeasurement)
+                    && Objects.deepEquals(additionalObservableMeasurements, that.additionalObservableMeasurements);
         }
 
         @Override
@@ -1953,10 +2181,11 @@ class ReconfigurableMeterProvider implements MeterProvider {
         List<Double> bucketBoundaries;
 
         ReconfigurableDoubleHistogramBuilder(
-            DoubleHistogramBuilder delegate, String name,
-            ConcurrentMap<HistogramKey<Double>, ReconfigurableDoubleHistogram> doubleHistograms,
-            ConcurrentMap<HistogramKey<Long>, ReconfigurableLongHistogram> longHistograms,
-            ReadWriteLock lock) {
+                DoubleHistogramBuilder delegate,
+                String name,
+                ConcurrentMap<HistogramKey<Double>, ReconfigurableDoubleHistogram> doubleHistograms,
+                ConcurrentMap<HistogramKey<Long>, ReconfigurableLongHistogram> longHistograms,
+                ReadWriteLock lock) {
 
             this.delegate = delegate;
             this.name = name;
@@ -2008,11 +2237,13 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public LongHistogramBuilder ofLongs() {
             lock.readLock().lock();
             try {
-                ReconfigurableLongHistogramBuilder reconfigurableLongCounterBuilder = new ReconfigurableLongHistogramBuilder(delegate.ofLongs(), name, longHistograms, lock);
+                ReconfigurableLongHistogramBuilder reconfigurableLongCounterBuilder =
+                        new ReconfigurableLongHistogramBuilder(delegate.ofLongs(), name, longHistograms, lock);
                 Optional.ofNullable(description).ifPresent(reconfigurableLongCounterBuilder::setDescription);
                 Optional.ofNullable(unit).ifPresent(reconfigurableLongCounterBuilder::setUnit);
                 if (reconfigurableLongCounterBuilder.delegate instanceof ExtendedLongHistogramBuilder) {
-                    Optional.ofNullable(attributes).ifPresent(((ExtendedLongHistogramBuilder) reconfigurableLongCounterBuilder.delegate)::setAttributesAdvice);
+                    Optional.ofNullable(attributes).ifPresent(((ExtendedLongHistogramBuilder)
+                            reconfigurableLongCounterBuilder.delegate)::setAttributesAdvice);
                 }
                 return reconfigurableLongCounterBuilder;
             } finally {
@@ -2024,8 +2255,10 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public DoubleHistogram build() {
             lock.readLock().lock();
             try {
-                HistogramKey<Double> doubleHistogramKey = new HistogramKey<>(name, description, unit, attributes, bucketBoundaries);
-                return doubleHistograms.computeIfAbsent(doubleHistogramKey, k -> new ReconfigurableDoubleHistogram(delegate.build(), lock));
+                HistogramKey<Double> doubleHistogramKey =
+                        new HistogramKey<>(name, description, unit, attributes, bucketBoundaries);
+                return doubleHistograms.computeIfAbsent(
+                        doubleHistogramKey, k -> new ReconfigurableDoubleHistogram(delegate.build(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -2048,6 +2281,7 @@ class ReconfigurableMeterProvider implements MeterProvider {
     @ThreadSafe
     protected static class ReconfigurableDoubleHistogram implements DoubleHistogram {
         final ReadWriteLock lock;
+
         @GuardedBy("lock")
         private DoubleHistogram delegate;
 
@@ -2116,10 +2350,11 @@ class ReconfigurableMeterProvider implements MeterProvider {
         List<Long> bucketBoundaries;
         List<AttributeKey<?>> attributes;
 
-
-        ReconfigurableLongHistogramBuilder(LongHistogramBuilder delegate, String name,
-                                           ConcurrentMap<HistogramKey<Long>, ReconfigurableLongHistogram> longHistograms,
-                                           ReadWriteLock lock) {
+        ReconfigurableLongHistogramBuilder(
+                LongHistogramBuilder delegate,
+                String name,
+                ConcurrentMap<HistogramKey<Long>, ReconfigurableLongHistogram> longHistograms,
+                ReadWriteLock lock) {
             this.delegate = delegate;
             this.name = name;
             this.longHistograms = longHistograms;
@@ -2165,7 +2400,6 @@ class ReconfigurableMeterProvider implements MeterProvider {
             }
         }
 
-
         @Override
         public LongHistogramBuilder setExplicitBucketBoundariesAdvice(List<Long> bucketBoundaries) {
             lock.readLock().lock();
@@ -2182,19 +2416,21 @@ class ReconfigurableMeterProvider implements MeterProvider {
         public LongHistogram build() {
             lock.readLock().lock();
             try {
-                HistogramKey<Long> longHistogramKey = new HistogramKey<>(name, description, unit, attributes, bucketBoundaries);
-                return longHistograms.computeIfAbsent(longHistogramKey, k -> new ReconfigurableLongHistogram(delegate.build(), lock));
+                HistogramKey<Long> longHistogramKey =
+                        new HistogramKey<>(name, description, unit, attributes, bucketBoundaries);
+                return longHistograms.computeIfAbsent(
+                        longHistogramKey, k -> new ReconfigurableLongHistogram(delegate.build(), lock));
             } finally {
                 lock.readLock().unlock();
             }
         }
-
     }
 
     @VisibleForTesting
     @ThreadSafe
     protected static class ReconfigurableLongHistogram implements LongHistogram {
         final ReadWriteLock lock;
+
         @GuardedBy("lock")
         private LongHistogram delegate;
 

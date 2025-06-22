@@ -5,6 +5,7 @@
 
 package io.jenkins.plugins.opentelemetry.api;
 
+import static org.junit.jupiter.api.Assertions.*;
 
 import io.opentelemetry.api.incubator.logs.ExtendedLogRecordBuilder;
 import io.opentelemetry.api.incubator.logs.ExtendedLogger;
@@ -12,12 +13,9 @@ import io.opentelemetry.api.logs.LogRecordBuilder;
 import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.logs.LoggerBuilder;
 import io.opentelemetry.api.logs.LoggerProvider;
-import org.junit.jupiter.api.Test;
-
-import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.*;
+import javax.annotation.Nullable;
+import org.junit.jupiter.api.Test;
 
 class ReconfigurableExtendedLoggerProviderTest {
 
@@ -28,10 +26,11 @@ class ReconfigurableExtendedLoggerProviderTest {
         LoggerProviderMock loggerProviderImpl_1 = new LoggerProviderMock();
         loggerProvider.setDelegate(loggerProviderImpl_1);
 
-        ReconfigurableLoggerProvider.ReconfigurableExtendedLogger authenticationLogger = (ReconfigurableLoggerProvider.ReconfigurableExtendedLogger) loggerProvider
-            .loggerBuilder("io.jenkins.authentication")
-            .setInstrumentationVersion("1.0.0")
-            .build();
+        ReconfigurableLoggerProvider.ReconfigurableExtendedLogger authenticationLogger =
+                (ReconfigurableLoggerProvider.ReconfigurableExtendedLogger) loggerProvider
+                        .loggerBuilder("io.jenkins.authentication")
+                        .setInstrumentationVersion("1.0.0")
+                        .build();
 
         LoggerMock authenticationLoggerImpl = (LoggerMock) authenticationLogger.delegate;
         assertEquals("io.jenkins.authentication", authenticationLoggerImpl.instrumentationScopeName);
@@ -39,21 +38,22 @@ class ReconfigurableExtendedLoggerProviderTest {
         assertEquals("1.0.0", authenticationLoggerImpl.instrumentationVersion);
         assertEquals(loggerProviderImpl_1.id, authenticationLoggerImpl.loggerProviderId);
 
-
-        ReconfigurableLoggerProvider.ReconfigurableExtendedLogger buildLogger = (ReconfigurableLoggerProvider.ReconfigurableExtendedLogger) loggerProvider
-            .loggerBuilder("io.jenkins.build")
-            .setSchemaUrl("https://jenkins.io/build")
-            .build();
+        ReconfigurableLoggerProvider.ReconfigurableExtendedLogger buildLogger =
+                (ReconfigurableLoggerProvider.ReconfigurableExtendedLogger) loggerProvider
+                        .loggerBuilder("io.jenkins.build")
+                        .setSchemaUrl("https://jenkins.io/build")
+                        .build();
         LoggerMock buildLoggerImpl = (LoggerMock) buildLogger.delegate;
         assertEquals("io.jenkins.build", buildLoggerImpl.instrumentationScopeName);
         assertEquals("https://jenkins.io/build", buildLoggerImpl.schemaUrl);
         assertNull(buildLoggerImpl.instrumentationVersion);
         assertEquals(loggerProviderImpl_1.id, buildLoggerImpl.loggerProviderId);
 
-        ReconfigurableLoggerProvider.ReconfigurableExtendedLogger buildLoggerShouldBeTheSameInstance = (ReconfigurableLoggerProvider.ReconfigurableExtendedLogger) loggerProvider
-            .loggerBuilder("io.jenkins.build")
-            .setSchemaUrl("https://jenkins.io/build")
-            .build();
+        ReconfigurableLoggerProvider.ReconfigurableExtendedLogger buildLoggerShouldBeTheSameInstance =
+                (ReconfigurableLoggerProvider.ReconfigurableExtendedLogger) loggerProvider
+                        .loggerBuilder("io.jenkins.build")
+                        .setSchemaUrl("https://jenkins.io/build")
+                        .build();
 
         assertEquals(buildLogger, buildLoggerShouldBeTheSameInstance);
 
@@ -77,7 +77,6 @@ class ReconfigurableExtendedLoggerProviderTest {
         assertNull(buildLoggerImpl_2.instrumentationVersion);
         assertEquals(loggerProviderImpl_2.id, buildLoggerImpl_2.loggerProviderId);
     }
-
 
     static class LoggerProviderMock implements LoggerProvider {
         static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
@@ -111,7 +110,12 @@ class ReconfigurableExtendedLoggerProviderTest {
         public LoggerMock(String instrumentationScopeName, String loggerProviderId) {
             this(instrumentationScopeName, loggerProviderId, null, null);
         }
-        public LoggerMock(String instrumentationScopeName, String loggerProviderId, @Nullable String schemaUrl, @Nullable String instrumentationVersion) {
+
+        public LoggerMock(
+                String instrumentationScopeName,
+                String loggerProviderId,
+                @Nullable String schemaUrl,
+                @Nullable String instrumentationVersion) {
             this.id = "LoggerMock-" + ID_SOURCE.incrementAndGet();
             this.instrumentationScopeName = instrumentationScopeName;
             this.loggerProviderId = loggerProviderId;
@@ -124,13 +128,17 @@ class ReconfigurableExtendedLoggerProviderTest {
             throw new UnsupportedOperationException();
         }
     }
-    
-    static class ExtendedLoggerMock extends LoggerMock implements ExtendedLogger{
+
+    static class ExtendedLoggerMock extends LoggerMock implements ExtendedLogger {
         public ExtendedLoggerMock(String instrumentationScopeName, String loggerProviderId) {
             super(instrumentationScopeName, loggerProviderId);
         }
 
-        public ExtendedLoggerMock(String instrumentationScopeName, String loggerProviderId, @Nullable String schemaUrl, @Nullable String instrumentationVersion) {
+        public ExtendedLoggerMock(
+                String instrumentationScopeName,
+                String loggerProviderId,
+                @Nullable String schemaUrl,
+                @Nullable String instrumentationVersion) {
             super(instrumentationScopeName, loggerProviderId, schemaUrl, instrumentationVersion);
         }
 
@@ -153,7 +161,6 @@ class ReconfigurableExtendedLoggerProviderTest {
         String schemaUrl;
         String instrumentationVersion;
 
-
         public LoggerBuilderMock(String instrumentationScopeName, String loggerProviderId) {
             this.id = "LoggerBuilderMock-" + ID_SOURCE.incrementAndGet();
             this.instrumentationScopeName = instrumentationScopeName;
@@ -174,7 +181,8 @@ class ReconfigurableExtendedLoggerProviderTest {
 
         @Override
         public Logger build() {
-            return new ExtendedLoggerMock(instrumentationScopeName, loggerProviderId, schemaUrl, instrumentationVersion);
+            return new ExtendedLoggerMock(
+                    instrumentationScopeName, loggerProviderId, schemaUrl, instrumentationVersion);
         }
     }
 }

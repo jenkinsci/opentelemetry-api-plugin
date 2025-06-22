@@ -29,9 +29,6 @@ import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
 import io.opentelemetry.sdk.resources.Resource;
-
-import javax.annotation.OverridingMethodsMustInvokeSuper;
-import javax.annotation.PreDestroy;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,6 +38,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.OverridingMethodsMustInvokeSuper;
+import javax.annotation.PreDestroy;
 
 /**
  * <p>
@@ -58,9 +57,9 @@ import java.util.logging.Logger;
  */
 public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenTelemetry, Closeable, ExtensionPoint {
 
-    private final static Logger logger = Logger.getLogger(ReconfigurableOpenTelemetry.class.getName());
-    private final static ReconfigurableOpenTelemetry INSTANCE = new ReconfigurableOpenTelemetry();
-    private final static AtomicInteger GET_INVOCATION_COUNT = new AtomicInteger(0);
+    private static final Logger logger = Logger.getLogger(ReconfigurableOpenTelemetry.class.getName());
+    private static final ReconfigurableOpenTelemetry INSTANCE = new ReconfigurableOpenTelemetry();
+    private static final AtomicInteger GET_INVOCATION_COUNT = new AtomicInteger(0);
 
     Resource resource = Resource.empty();
     ConfigProperties config = ConfigPropertiesUtils.emptyConfig();
@@ -112,9 +111,10 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             logger.log(Level.WARNING, "GlobalOpenTelemetry already set", e);
         }
 
-        logger.log(Level.FINE, () -> "Configure " +
-                "GlobalOpenTelemetry with instance " + Optional.of(GlobalOpenTelemetry.get())
-                .map(ot -> ot + "@" + System.identityHashCode(ot)));
+        logger.log(
+                Level.FINE,
+                () -> "Configure " + "GlobalOpenTelemetry with instance "
+                        + Optional.of(GlobalOpenTelemetry.get()).map(ot -> ot + "@" + System.identityHashCode(ot)));
     }
 
     /**
@@ -129,18 +129,20 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
     }
 
     @Override
-    public void configure(@NonNull Map<String, String> openTelemetryProperties, Resource openTelemetryResource, boolean disableShutdownHook) {
+    public void configure(
+            @NonNull Map<String, String> openTelemetryProperties,
+            Resource openTelemetryResource,
+            boolean disableShutdownHook) {
 
-        if (openTelemetryProperties.containsKey("otel.exporter.otlp.endpoint") ||
-                openTelemetryProperties.containsKey("otel.traces.exporter") ||
-                openTelemetryProperties.containsKey("otel.metrics.exporter") ||
-                openTelemetryProperties.containsKey("otel.logs.exporter")) {
+        if (openTelemetryProperties.containsKey("otel.exporter.otlp.endpoint")
+                || openTelemetryProperties.containsKey("otel.traces.exporter")
+                || openTelemetryProperties.containsKey("otel.metrics.exporter")
+                || openTelemetryProperties.containsKey("otel.logs.exporter")) {
 
             logger.log(Level.FINE, "initializeOtlp");
 
             // OPENTELEMETRY SDK
-            OpenTelemetrySdk openTelemetrySdk = AutoConfiguredOpenTelemetrySdk
-                    .builder()
+            OpenTelemetrySdk openTelemetrySdk = AutoConfiguredOpenTelemetrySdk.builder()
                     // properties
                     .addPropertiesCustomizer((Function<ConfigProperties, Map<String, String>>) configProperties -> {
                         // Overwrite OTel SDK Properties loaded through Environment variables and `-Dotel.*` system
@@ -148,7 +150,11 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                         if (logger.isLoggable(Level.INFO)) {
                             for (Map.Entry<String, String> keyValue : openTelemetryProperties.entrySet()) {
                                 if (configProperties.getString(keyValue.getKey()) != null) {
-                                    logger.log(Level.INFO, "Overwrite OTel SDK property: " + keyValue.getKey() + "=" + configProperties.getString(keyValue.getKey()) + " with Jenkins Plugin property: " + keyValue.getValue());
+                                    logger.log(
+                                            Level.INFO,
+                                            "Overwrite OTel SDK property: " + keyValue.getKey() + "="
+                                                    + configProperties.getString(keyValue.getKey())
+                                                    + " with Jenkins Plugin property: " + keyValue.getValue());
                                 }
                             }
                         }
@@ -161,13 +167,13 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                     })
                     // resource
                     .addResourceCustomizer((resource1, configProperties) -> {
-                                // keep a reference to the computed Resource for future use in the plugin
-                                this.resource = Resource.builder()
-                                        .putAll(resource1)
-                                        .putAll(openTelemetryResource).build();
-                                return this.resource;
-                            }
-                    )
+                        // keep a reference to the computed Resource for future use in the plugin
+                        this.resource = Resource.builder()
+                                .putAll(resource1)
+                                .putAll(openTelemetryResource)
+                                .build();
+                        return this.resource;
+                    })
                     .addLogRecordExporterCustomizer((logRecordExporter, configProperties) -> {
                         // keep a reference to the computed LogRecordExporter for future use in the plugin
                         this.logRecordExporter = logRecordExporter;
@@ -193,7 +199,10 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                 }
             }
 
-            logger.log(Level.INFO, () -> "OpenTelemetry configured: " + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
+            logger.log(
+                    Level.INFO,
+                    () -> "OpenTelemetry configured: "
+                            + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
 
         } else { // NO-OP
 
@@ -310,24 +319,27 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
 
     @OverridingMethodsMustInvokeSuper
     protected void postOpenTelemetrySdkConfiguration() {
-        ExtensionList.lookup(OpenTelemetryLifecycleListener.class).stream().sorted().forEach(openTelemetryLifecycleListener -> {
-            logger.log(Level.FINE, () -> "Notify " + openTelemetryLifecycleListener + " after OpenTelemetry configuration");
-            openTelemetryLifecycleListener.afterConfiguration(this.config);
-        });
+        ExtensionList.lookup(OpenTelemetryLifecycleListener.class).stream()
+                .sorted()
+                .forEach(openTelemetryLifecycleListener -> {
+                    logger.log(
+                            Level.FINE,
+                            () -> "Notify " + openTelemetryLifecycleListener + " after OpenTelemetry configuration");
+                    openTelemetryLifecycleListener.afterConfiguration(this.config);
+                });
     }
 
     /**
      * Noop implementation of {@link LogRecordExporter}
      */
     private static class NoopLogRecordExporter implements LogRecordExporter {
-        final static NoopLogRecordExporter INSTANCE = new NoopLogRecordExporter();
+        static final NoopLogRecordExporter INSTANCE = new NoopLogRecordExporter();
 
         static NoopLogRecordExporter getInstance() {
             return INSTANCE;
         }
 
-        private NoopLogRecordExporter() {
-        }
+        private NoopLogRecordExporter() {}
 
         @Override
         public CompletableResultCode export(Collection<LogRecordData> logs) {

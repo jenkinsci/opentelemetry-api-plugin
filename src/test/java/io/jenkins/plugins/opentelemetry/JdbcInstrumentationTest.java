@@ -2,10 +2,9 @@ package io.jenkins.plugins.opentelemetry;
 
 import io.jenkins.plugins.opentelemetry.api.ReconfigurableOpenTelemetry;
 import io.opentelemetry.instrumentation.jdbc.datasource.JdbcTelemetry;
+import javax.sql.DataSource;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.Test;
-
-import javax.sql.DataSource;
 
 class JdbcInstrumentationTest {
 

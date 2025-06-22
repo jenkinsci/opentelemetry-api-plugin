@@ -1,9 +1,9 @@
 package io.jenkins.plugins.opentelemetry;
 
-import org.junit.jupiter.api.Test;
-
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+
+import org.junit.jupiter.api.Test;
 
 class ClasspathTest {
 
