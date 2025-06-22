@@ -5,18 +5,17 @@
 
 package io.jenkins.plugins.opentelemetry.api;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import io.opentelemetry.api.incubator.trace.ExtendedSpanBuilder;
 import io.opentelemetry.api.incubator.trace.ExtendedTracer;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.TracerBuilder;
 import io.opentelemetry.api.trace.TracerProvider;
-import org.junit.jupiter.api.Test;
-
-import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.*;
+import javax.annotation.Nullable;
+import org.junit.jupiter.api.Test;
 
 class ReconfigurableExtendedTracerProviderTest {
 
@@ -27,10 +26,11 @@ class ReconfigurableExtendedTracerProviderTest {
         TracerProviderMock tracerProviderImpl_1 = new TracerProviderMock();
         tracerProvider.setDelegate(tracerProviderImpl_1);
 
-        ReconfigurableTracerProvider.ReconfigurableExtendedTracer authenticationTracer = (ReconfigurableTracerProvider.ReconfigurableExtendedTracer) tracerProvider
-                .tracerBuilder("io.jenkins.authentication")
-                .setInstrumentationVersion("1.0.0")
-                .build();
+        ReconfigurableTracerProvider.ReconfigurableExtendedTracer authenticationTracer =
+                (ReconfigurableTracerProvider.ReconfigurableExtendedTracer) tracerProvider
+                        .tracerBuilder("io.jenkins.authentication")
+                        .setInstrumentationVersion("1.0.0")
+                        .build();
 
         TracerMock authenticationTracerImpl = (TracerMock) authenticationTracer.delegate;
         assertEquals("io.jenkins.authentication", authenticationTracerImpl.instrumentationScopeName);
@@ -38,21 +38,22 @@ class ReconfigurableExtendedTracerProviderTest {
         assertEquals("1.0.0", authenticationTracerImpl.instrumentationVersion);
         assertEquals(tracerProviderImpl_1.id, authenticationTracerImpl.tracerProviderId);
 
-
-        ReconfigurableTracerProvider.ReconfigurableExtendedTracer buildTracer = (ReconfigurableTracerProvider.ReconfigurableExtendedTracer) tracerProvider
-                .tracerBuilder("io.jenkins.build")
-                .setSchemaUrl("https://jenkins.io/build")
-                .build();
+        ReconfigurableTracerProvider.ReconfigurableExtendedTracer buildTracer =
+                (ReconfigurableTracerProvider.ReconfigurableExtendedTracer) tracerProvider
+                        .tracerBuilder("io.jenkins.build")
+                        .setSchemaUrl("https://jenkins.io/build")
+                        .build();
         TracerMock buildTracerImpl = (TracerMock) buildTracer.delegate;
         assertEquals("io.jenkins.build", buildTracerImpl.instrumentationScopeName);
         assertEquals("https://jenkins.io/build", buildTracerImpl.schemaUrl);
         assertNull(buildTracerImpl.instrumentationVersion);
         assertEquals(tracerProviderImpl_1.id, buildTracerImpl.tracerProviderId);
 
-        ReconfigurableTracerProvider.ReconfigurableExtendedTracer buildTracerShouldBeTheSameInstance = (ReconfigurableTracerProvider.ReconfigurableExtendedTracer) tracerProvider
-                .tracerBuilder("io.jenkins.build")
-                .setSchemaUrl("https://jenkins.io/build")
-                .build();
+        ReconfigurableTracerProvider.ReconfigurableExtendedTracer buildTracerShouldBeTheSameInstance =
+                (ReconfigurableTracerProvider.ReconfigurableExtendedTracer) tracerProvider
+                        .tracerBuilder("io.jenkins.build")
+                        .setSchemaUrl("https://jenkins.io/build")
+                        .build();
 
         assertEquals(buildTracer, buildTracerShouldBeTheSameInstance);
 
@@ -76,7 +77,6 @@ class ReconfigurableExtendedTracerProviderTest {
         assertNull(buildTracerImpl_2.instrumentationVersion);
         assertEquals(tracerProviderImpl_2.id, buildTracerImpl_2.tracerProviderId);
     }
-
 
     static class TracerProviderMock implements TracerProvider {
         static final AtomicInteger ID_SOURCE = new AtomicInteger(0);
@@ -120,7 +120,11 @@ class ReconfigurableExtendedTracerProviderTest {
             this(instrumentationScopeName, tracerProviderId, null, instrumentationVersion);
         }
 
-        public TracerMock(String instrumentationScopeName, String tracerProviderId, @Nullable String schemaUrl, @Nullable String instrumentationVersion) {
+        public TracerMock(
+                String instrumentationScopeName,
+                String tracerProviderId,
+                @Nullable String schemaUrl,
+                @Nullable String instrumentationVersion) {
             this.id = "TracerMock-" + ID_SOURCE.incrementAndGet();
             this.instrumentationScopeName = instrumentationScopeName;
             this.tracerProviderId = tracerProviderId;
@@ -139,11 +143,16 @@ class ReconfigurableExtendedTracerProviderTest {
             super(instrumentationScopeName, tracerProviderId);
         }
 
-        public ExtendedTracerMock(String instrumentationScopeName, String instrumentationVersion, String tracerProviderId) {
+        public ExtendedTracerMock(
+                String instrumentationScopeName, String instrumentationVersion, String tracerProviderId) {
             super(instrumentationScopeName, instrumentationVersion, tracerProviderId);
         }
 
-        public ExtendedTracerMock(String instrumentationScopeName, String tracerProviderId, @Nullable String schemaUrl, @Nullable String instrumentationVersion) {
+        public ExtendedTracerMock(
+                String instrumentationScopeName,
+                String tracerProviderId,
+                @Nullable String schemaUrl,
+                @Nullable String instrumentationVersion) {
             super(instrumentationScopeName, tracerProviderId, schemaUrl, instrumentationVersion);
         }
 
@@ -166,7 +175,6 @@ class ReconfigurableExtendedTracerProviderTest {
         String schemaUrl;
         String instrumentationVersion;
 
-
         public TracerBuilderMock(String instrumentationScopeName, String tracerProviderId) {
             this.id = "TracerBuilderMock-" + ID_SOURCE.incrementAndGet();
             this.instrumentationScopeName = instrumentationScopeName;
@@ -187,7 +195,8 @@ class ReconfigurableExtendedTracerProviderTest {
 
         @Override
         public Tracer build() {
-            return new ExtendedTracerMock(instrumentationScopeName, tracerProviderId, schemaUrl, instrumentationVersion);
+            return new ExtendedTracerMock(
+                    instrumentationScopeName, tracerProviderId, schemaUrl, instrumentationVersion);
         }
     }
 }

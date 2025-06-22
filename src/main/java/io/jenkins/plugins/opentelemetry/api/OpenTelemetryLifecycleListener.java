@@ -10,7 +10,7 @@ import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 
 public interface OpenTelemetryLifecycleListener extends ExtensionPoint, Comparable<OpenTelemetryLifecycleListener> {
 
-    default void afterConfiguration(ConfigProperties configProperties){}
+    default void afterConfiguration(ConfigProperties configProperties) {}
 
     /**
      * @return the ordinal of this otel component to execute step handlers in predictable order. The smallest ordinal is handled first.
