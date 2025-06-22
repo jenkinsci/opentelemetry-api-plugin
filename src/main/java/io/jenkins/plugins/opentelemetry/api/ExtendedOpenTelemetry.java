@@ -5,7 +5,6 @@ import hudson.ExtensionPoint;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.resources.Resource;
-
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -43,8 +42,10 @@ public interface ExtendedOpenTelemetry extends ExtensionPoint, OpenTelemetry {
      * @param openTelemetryResource   resource attributes passed through {@link io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdkBuilder#addResourceCustomizer(BiFunction)}
      * @param disableShutdownHook     enable / disable a shutdown hook
      */
-    default void configure(@NonNull Map<String, String> openTelemetryProperties, Resource openTelemetryResource, boolean disableShutdownHook) {
-    }
+    default void configure(
+            @NonNull Map<String, String> openTelemetryProperties,
+            Resource openTelemetryResource,
+            boolean disableShutdownHook) {}
 
     @Deprecated
     OpenTelemetry getImplementation();

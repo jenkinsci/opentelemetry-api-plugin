@@ -22,5 +22,4 @@ public class JenkinsAttributes {
     public static final String JENKINS = "jenkins";
 
     public static final AttributeKey<String> JENKINS_VERSION = AttributeKey.stringKey("jenkins.version");
-
 }

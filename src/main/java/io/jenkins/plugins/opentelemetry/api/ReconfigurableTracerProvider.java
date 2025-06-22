@@ -11,14 +11,13 @@ import io.opentelemetry.api.incubator.trace.ExtendedTracer;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.TracerBuilder;
 import io.opentelemetry.api.trace.TracerProvider;
-
-import javax.annotation.Nonnull;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import javax.annotation.Nonnull;
 
 /**
  * <p>
@@ -56,7 +55,8 @@ class ReconfigurableTracerProvider implements TracerProvider {
         try {
             return tracers.computeIfAbsent(
                     new InstrumentationScope(instrumentationScopeName),
-                    instrumentationScope -> new ReconfigurableExtendedTracer(delegate.get(instrumentationScope.instrumentationScopeName), lock));
+                    instrumentationScope -> new ReconfigurableExtendedTracer(
+                            delegate.get(instrumentationScope.instrumentationScopeName), lock));
         } finally {
             lock.readLock().unlock();
         }
@@ -68,7 +68,8 @@ class ReconfigurableTracerProvider implements TracerProvider {
             this.delegate = delegate;
             tracers.forEach((instrumentationScope, reconfigurableExtendedTracer) -> {
                 TracerBuilder tracerBuilder = delegate.tracerBuilder(instrumentationScope.instrumentationScopeName);
-                Optional.ofNullable(instrumentationScope.instrumentationScopeVersion).ifPresent(tracerBuilder::setInstrumentationVersion);
+                Optional.ofNullable(instrumentationScope.instrumentationScopeVersion)
+                        .ifPresent(tracerBuilder::setInstrumentationVersion);
                 Optional.ofNullable(instrumentationScope.schemaUrl).ifPresent(tracerBuilder::setSchemaUrl);
                 reconfigurableExtendedTracer.setDelegate(tracerBuilder.build());
             });
@@ -83,7 +84,8 @@ class ReconfigurableTracerProvider implements TracerProvider {
         try {
             return tracers.computeIfAbsent(
                     new InstrumentationScope(instrumentationScopeName, null, instrumentationScopeVersion),
-                    instrumentationScope -> new ReconfigurableExtendedTracer(delegate.get(instrumentationScopeName, instrumentationScopeVersion), lock));
+                    instrumentationScope -> new ReconfigurableExtendedTracer(
+                            delegate.get(instrumentationScopeName, instrumentationScopeVersion), lock));
         } finally {
             lock.readLock().unlock();
         }
@@ -93,7 +95,8 @@ class ReconfigurableTracerProvider implements TracerProvider {
     public TracerBuilder tracerBuilder(String instrumentationScopeName) {
         lock.readLock().lock();
         try {
-            return new ReconfigurableTracerBuilder(delegate.tracerBuilder(instrumentationScopeName), instrumentationScopeName, lock);
+            return new ReconfigurableTracerBuilder(
+                    delegate.tracerBuilder(instrumentationScopeName), instrumentationScopeName, lock);
         } finally {
             lock.readLock().unlock();
         }
@@ -116,7 +119,8 @@ class ReconfigurableTracerProvider implements TracerProvider {
         String instrumentationScopeVersion;
         final ReadWriteLock lock;
 
-        public ReconfigurableTracerBuilder(TracerBuilder delegate, String instrumentationScopeName, ReadWriteLock lock) {
+        public ReconfigurableTracerBuilder(
+                TracerBuilder delegate, String instrumentationScopeName, ReadWriteLock lock) {
             this.delegate = Objects.requireNonNull(delegate);
             this.instrumentationScopeName = Objects.requireNonNull(instrumentationScopeName);
             this.lock = lock;
@@ -140,8 +144,10 @@ class ReconfigurableTracerProvider implements TracerProvider {
         public Tracer build() {
             lock.readLock().lock();
             try {
-                InstrumentationScope instrumentationScope = new InstrumentationScope(instrumentationScopeName, schemaUrl, instrumentationScopeVersion);
-                return tracers.computeIfAbsent(instrumentationScope, k -> new ReconfigurableExtendedTracer(delegate.build(), lock));
+                InstrumentationScope instrumentationScope =
+                        new InstrumentationScope(instrumentationScopeName, schemaUrl, instrumentationScopeVersion);
+                return tracers.computeIfAbsent(
+                        instrumentationScope, k -> new ReconfigurableExtendedTracer(delegate.build(), lock));
             } finally {
                 lock.readLock().unlock();
             }
@@ -171,8 +177,8 @@ class ReconfigurableTracerProvider implements TracerProvider {
                     // Not available
                 }
 
-                throw new IllegalStateException("Delegate '" + tracer + "' must be an instance of ExtendedTracer. " +
-                        "API incubator module is not on the classpath: " + incubatorAvailable);
+                throw new IllegalStateException("Delegate '" + tracer + "' must be an instance of ExtendedTracer. "
+                        + "API incubator module is not on the classpath: " + incubatorAvailable);
             }
             return (ExtendedTracer) tracer;
         }
@@ -215,5 +221,4 @@ class ReconfigurableTracerProvider implements TracerProvider {
             }
         }
     }
-
 }

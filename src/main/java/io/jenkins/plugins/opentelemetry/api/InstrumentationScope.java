@@ -5,9 +5,9 @@
 
 package io.jenkins.plugins.opentelemetry.api;
 
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
  * <a href="https://opentelemetry.io/docs/concepts/instrumentation-scope/">OpenTelemetry instrumentation scope</a>,
@@ -16,12 +16,15 @@ import java.util.Objects;
 class InstrumentationScope {
     @Nonnull
     final String instrumentationScopeName;
+
     @Nullable
     final String schemaUrl;
+
     @Nullable
     final String instrumentationScopeVersion;
 
-    public InstrumentationScope(String instrumentationScopeName, @Nullable String schemaUrl, @Nullable String instrumentationScopeVersion) {
+    public InstrumentationScope(
+            String instrumentationScopeName, @Nullable String schemaUrl, @Nullable String instrumentationScopeVersion) {
         this.instrumentationScopeName = Objects.requireNonNull(instrumentationScopeName);
         this.schemaUrl = schemaUrl;
         this.instrumentationScopeVersion = instrumentationScopeVersion;
@@ -35,11 +38,10 @@ class InstrumentationScope {
 
     @Override
     public String toString() {
-        return "InstrumentationScope{" +
-            "instrumentationScopeName='" + instrumentationScopeName + '\'' +
-            ", schemaUrl='" + schemaUrl + '\'' +
-            ", instrumentationScopeVersion='" + instrumentationScopeVersion + '\'' +
-            '}';
+        return "InstrumentationScope{" + "instrumentationScopeName='"
+                + instrumentationScopeName + '\'' + ", schemaUrl='"
+                + schemaUrl + '\'' + ", instrumentationScopeVersion='"
+                + instrumentationScopeVersion + '\'' + '}';
     }
 
     @Override
@@ -47,7 +49,9 @@ class InstrumentationScope {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         InstrumentationScope that = (InstrumentationScope) o;
-        return Objects.equals(instrumentationScopeName, that.instrumentationScopeName) && Objects.equals(schemaUrl, that.schemaUrl) && Objects.equals(instrumentationScopeVersion, that.instrumentationScopeVersion);
+        return Objects.equals(instrumentationScopeName, that.instrumentationScopeName)
+                && Objects.equals(schemaUrl, that.schemaUrl)
+                && Objects.equals(instrumentationScopeVersion, that.instrumentationScopeVersion);
     }
 
     @Override
