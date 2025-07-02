@@ -145,6 +145,9 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
         //    `otel.[traces,logs,metrics].exporter` are `otlp` by default if they are not defined.
         // 2. `otel.exporter.otlp.endpoint` not defined but exporters are defined and they are not `otlp`
         var endpoint = openTelemetryProperties.get("otel.exporter.otlp.endpoint");
+        if (StringUtils.isBlank(endpoint)) {
+            endpoint = openTelemetryProperties.get("otel.exporter.otlp.traces.endpoint");
+        }
         var tracesExporter = openTelemetryProperties.get("otel.traces.exporter");
         var logsExporter = openTelemetryProperties.get("otel.logs.exporter");
         var metricsExporter = openTelemetryProperties.get("otel.metrics.exporter");
