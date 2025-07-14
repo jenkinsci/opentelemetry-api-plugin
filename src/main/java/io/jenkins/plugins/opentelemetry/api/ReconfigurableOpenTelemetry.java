@@ -29,12 +29,6 @@ import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
 import io.opentelemetry.sdk.resources.Resource;
-
-import javax.annotation.OverridingMethodsMustInvokeSuper;
-import javax.annotation.PreDestroy;
-
-import org.apache.commons.lang.StringUtils;
-
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,7 +38,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import javax.annotation.OverridingMethodsMustInvokeSuper;
+import javax.annotation.PreDestroy;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * <p>
@@ -139,9 +135,9 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             Resource openTelemetryResource,
             boolean disableShutdownHook) {
 
-        // Configure real OTel SDK if one of the following config is passed, 
+        // Configure real OTel SDK if one of the following config is passed,
         // otherwise setup as no-op:
-        // 1. `otel.exporter.otlp.endpoint` is defined 
+        // 1. `otel.exporter.otlp.endpoint` is defined
         //    `otel.[traces,logs,metrics].exporter` are `otlp` by default if they are not defined.
         // 2. `otel.exporter.otlp.endpoint` not defined but exporters are defined and they are not `otlp`
         var endpoint = openTelemetryProperties.get("otel.exporter.otlp.endpoint");
