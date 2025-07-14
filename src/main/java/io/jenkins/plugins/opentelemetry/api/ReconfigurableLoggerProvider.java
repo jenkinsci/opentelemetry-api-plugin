@@ -11,7 +11,6 @@ import io.opentelemetry.api.incubator.logs.ExtendedLogger;
 import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.logs.LoggerBuilder;
 import io.opentelemetry.api.logs.LoggerProvider;
-
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,7 +52,8 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
     public LoggerBuilder loggerBuilder(String instrumentationScopeName) {
         lock.readLock().lock();
         try {
-            return new ReconfigurableLoggerBuilder(delegate.loggerBuilder(instrumentationScopeName), instrumentationScopeName, lock);
+            return new ReconfigurableLoggerBuilder(
+                    delegate.loggerBuilder(instrumentationScopeName), instrumentationScopeName, lock);
         } finally {
             lock.readLock().unlock();
         }
@@ -64,7 +64,9 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
         lock.readLock().lock();
         try {
             InstrumentationScope instrumentationScope = new InstrumentationScope(instrumentationScopeName);
-            return loggers.computeIfAbsent(instrumentationScope, scope -> new ReconfigurableExtendedLogger(delegate.get(instrumentationScopeName), lock));
+            return loggers.computeIfAbsent(
+                    instrumentationScope,
+                    scope -> new ReconfigurableExtendedLogger(delegate.get(instrumentationScopeName), lock));
         } finally {
             lock.readLock().unlock();
         }
@@ -76,7 +78,8 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
             this.delegate = delegate;
             loggers.forEach((instrumentationScope, reconfigurableTracer) -> {
                 LoggerBuilder loggerBuilder = delegate.loggerBuilder(instrumentationScope.instrumentationScopeName);
-                Optional.ofNullable(instrumentationScope.instrumentationScopeVersion).ifPresent(loggerBuilder::setInstrumentationVersion);
+                Optional.ofNullable(instrumentationScope.instrumentationScopeVersion)
+                        .ifPresent(loggerBuilder::setInstrumentationVersion);
                 Optional.ofNullable(instrumentationScope.schemaUrl).ifPresent(loggerBuilder::setSchemaUrl);
                 reconfigurableTracer.setDelegate(loggerBuilder.build());
             });
@@ -93,7 +96,8 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
         String instrumentationScopeVersion;
         final ReadWriteLock lock;
 
-        public ReconfigurableLoggerBuilder(LoggerBuilder delegate, String instrumentationScopeName, ReadWriteLock lock) {
+        public ReconfigurableLoggerBuilder(
+                LoggerBuilder delegate, String instrumentationScopeName, ReadWriteLock lock) {
             this.delegate = Objects.requireNonNull(delegate);
             this.instrumentationScopeName = Objects.requireNonNull(instrumentationScopeName);
             this.lock = lock;
@@ -115,8 +119,10 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
 
         @Override
         public Logger build() {
-            InstrumentationScope instrumentationScope = new InstrumentationScope(instrumentationScopeName, schemaUrl, instrumentationScopeVersion);
-            return loggers.computeIfAbsent(instrumentationScope, scope -> new ReconfigurableExtendedLogger(delegate.build(), lock));
+            InstrumentationScope instrumentationScope =
+                    new InstrumentationScope(instrumentationScopeName, schemaUrl, instrumentationScopeVersion);
+            return loggers.computeIfAbsent(
+                    instrumentationScope, scope -> new ReconfigurableExtendedLogger(delegate.build(), lock));
         }
     }
 
@@ -171,8 +177,8 @@ class ReconfigurableLoggerProvider implements LoggerProvider {
                     // Not available
                 }
 
-                throw new IllegalStateException("Delegate '" + logger + "' must be an instance of Extended. " +
-                        "API incubator module is not on the classpath: " + incubatorAvailable);
+                throw new IllegalStateException("Delegate '" + logger + "' must be an instance of Extended. "
+                        + "API incubator module is not on the classpath: " + incubatorAvailable);
             }
             return (ExtendedLogger) logger;
         }

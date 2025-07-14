@@ -5,6 +5,8 @@
 
 package io.jenkins.plugins.opentelemetry.api;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.LongUpDownCounter;
 import io.opentelemetry.api.metrics.Meter;
@@ -26,8 +28,6 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 /**
  * https://github.com/open-telemetry/opentelemetry-java-instrumentation/blob/main/testing-common/src/main/java/io/opentelemetry/instrumentation/testing/LibraryTestRunner.java#L87
  */
@@ -44,15 +44,18 @@ class ReconfigurableMeterProviderITTest {
             longCounter.add(1);
             assertMetricExist("test.long.counter", metricReader);
 
-            ObservableLongMeasurement testLongCounterObserver = meter.counterBuilder("test.long.counter.observer").buildObserver();
+            ObservableLongMeasurement testLongCounterObserver =
+                    meter.counterBuilder("test.long.counter.observer").buildObserver();
             meter.batchCallback(() -> testLongCounterObserver.record(1), testLongCounterObserver);
             assertMetricExist("test.long.counter.observer", metricReader);
 
-            meter.counterBuilder("test.long.counter.callback").buildWithCallback(observableLongMeasurement -> observableLongMeasurement.record(1));
+            meter.counterBuilder("test.long.counter.callback")
+                    .buildWithCallback(observableLongMeasurement -> observableLongMeasurement.record(1));
             assertMetricExist("test.long.counter.callback", metricReader);
 
             // UP DOWN COUNTER
-            LongUpDownCounter longUpDownCounter = meter.upDownCounterBuilder("test.long.up.down.counter").build();
+            LongUpDownCounter longUpDownCounter =
+                    meter.upDownCounterBuilder("test.long.up.down.counter").build();
             longUpDownCounter.add(1);
             assertMetricExist("test.long.up.down.counter", metricReader);
 
@@ -60,7 +63,6 @@ class ReconfigurableMeterProviderITTest {
             assertMetricExist("jvm.class.loaded", metricReader);
             assertMetricExist("jvm.class.count", metricReader);
             assertMetricExist("jvm.class.unloaded", metricReader);
-
         }
     }
 
@@ -75,11 +77,13 @@ class ReconfigurableMeterProviderITTest {
                 MeterProvider meterProvider = reconfigurableOpenTelemetry.getMeterProvider();
                 Meter meter = meterProvider.meterBuilder("test-meter").build();
 
-                LongCounter longCounter = meter.counterBuilder("test.long.counter").build();
+                LongCounter longCounter =
+                        meter.counterBuilder("test.long.counter").build();
                 longCounter.add(1);
                 assertMetricExist("test.long.counter", metricReader);
 
-                ObservableLongMeasurement testLongCounterObserver = meter.counterBuilder("test.long.counter.observer").buildObserver();
+                ObservableLongMeasurement testLongCounterObserver =
+                        meter.counterBuilder("test.long.counter.observer").buildObserver();
                 meter.batchCallback(() -> testLongCounterObserver.record(1), testLongCounterObserver);
 
                 assertMetricExist("test.long.counter.observer", metricReader);
@@ -108,25 +112,33 @@ class ReconfigurableMeterProviderITTest {
             LongCounter longCounter = meter.counterBuilder("test.long.counter").build();
             longCounter.add(1);
 
-            ObservableLongMeasurement testLongCounterObserverMeasurement = meter.counterBuilder("test.long.counter.observer").buildObserver();
+            ObservableLongMeasurement testLongCounterObserverMeasurement =
+                    meter.counterBuilder("test.long.counter.observer").buildObserver();
             Runnable testLongCounterObserverCallback = () -> testLongCounterObserverMeasurement.record(1);
             meter.batchCallback(testLongCounterObserverCallback, testLongCounterObserverMeasurement);
 
-            meter.counterBuilder("test.long.counter.callback").buildWithCallback(observableLongMeasurement -> observableLongMeasurement.record(1));
+            meter.counterBuilder("test.long.counter.callback")
+                    .buildWithCallback(observableLongMeasurement -> observableLongMeasurement.record(1));
 
             // UP DOWN COUNTER
-            LongUpDownCounter longUpDownCounter = meter.upDownCounterBuilder("test.long.up.down.counter").build();
+            LongUpDownCounter longUpDownCounter =
+                    meter.upDownCounterBuilder("test.long.up.down.counter").build();
             longUpDownCounter.add(1);
             // long up down counter callback
-            meter.upDownCounterBuilder("test.long.up.down.counter.callback").buildWithCallback(observableLongMeasurement -> observableLongMeasurement.record(1));
+            meter.upDownCounterBuilder("test.long.up.down.counter.callback")
+                    .buildWithCallback(observableLongMeasurement -> observableLongMeasurement.record(1));
             // long up down counter observer
-            ObservableLongMeasurement testLongUpDownCounterObserverMeasurement = meter.upDownCounterBuilder("test.long.up.down.counter.observer").buildObserver();
-            meter.batchCallback(() -> testLongUpDownCounterObserverMeasurement.record(1), testLongUpDownCounterObserverMeasurement);
+            ObservableLongMeasurement testLongUpDownCounterObserverMeasurement = meter.upDownCounterBuilder(
+                            "test.long.up.down.counter.observer")
+                    .buildObserver();
+            meter.batchCallback(
+                    () -> testLongUpDownCounterObserverMeasurement.record(1), testLongUpDownCounterObserverMeasurement);
 
             // JVM metrics
             Classes.registerObservers(reconfigurableOpenTelemetry);
             Cpu.registerObservers(reconfigurableOpenTelemetry);
-            // GarbageCollector.registerObservers(reconfigurableOpenTelemetry); jvm.gc.duration is an histogram and not supported yet
+            // GarbageCollector.registerObservers(reconfigurableOpenTelemetry); jvm.gc.duration is an histogram and not
+            // supported yet
 
             try (OpenTelemetryTest openTelemetryTest = newOpenTelemetryTest()) {
 
@@ -151,11 +163,13 @@ class ReconfigurableMeterProviderITTest {
                 assertMetricExist("test.long.up.down.counter", metricReader);
 
                 // LONG UP DOWN COUNTER CALLBACK
-                // "test.long.up.down.counter.callback" was registered before the reconfiguration and should continue to exist
+                // "test.long.up.down.counter.callback" was registered before the reconfiguration and should continue to
+                // exist
                 assertMetricExist("test.long.up.down.counter.callback", metricReader);
 
                 // LONG UP DOWN COUNTER OBSERVER
-                // "test.long.up.down.counter.observer" was registered before the reconfiguration and should continue to exist
+                // "test.long.up.down.counter.observer" was registered before the reconfiguration and should continue to
+                // exist
                 assertMetricExist("test.long.up.down.counter.observer", metricReader);
 
                 // JVM
@@ -170,13 +184,18 @@ class ReconfigurableMeterProviderITTest {
         }
     }
 
-
     private static void assertMetricExist(String metricName, InMemoryMetricReader metricReader) {
-        assertTrue(metricReader.collectAllMetrics().stream().anyMatch(metricData -> metricName.equals(metricData.getName())), "Metric '" + metricName + "' was not exported");
+        assertTrue(
+                metricReader.collectAllMetrics().stream()
+                        .anyMatch(metricData -> metricName.equals(metricData.getName())),
+                "Metric '" + metricName + "' was not exported");
     }
 
     private static void assertMetricDoesntExist(String metricName, InMemoryMetricReader metricReader) {
-        assertTrue(metricReader.collectAllMetrics().stream().noneMatch(metricData -> metricName.equals(metricData.getName())), "Metric '" + metricName + "' should not exist");
+        assertTrue(
+                metricReader.collectAllMetrics().stream()
+                        .noneMatch(metricData -> metricName.equals(metricData.getName())),
+                "Metric '" + metricName + "' should not exist");
     }
 
     OpenTelemetryTest newOpenTelemetryTest() {
@@ -185,16 +204,15 @@ class ReconfigurableMeterProviderITTest {
 
         InMemoryMetricReader metricReader = InMemoryMetricReader.create();
 
-        OpenTelemetrySdk openTelemetryImpl =
-            OpenTelemetrySdk.builder()
-                .setTracerProvider(
-                    SdkTracerProvider.builder()
+        OpenTelemetrySdk openTelemetryImpl = OpenTelemetrySdk.builder()
+                .setTracerProvider(SdkTracerProvider.builder()
                         .addSpanProcessor(SimpleSpanProcessor.create(LoggingSpanExporter.create()))
                         .addSpanProcessor(SimpleSpanProcessor.create(InMemorySpanExporter.create()))
                         .build())
-                .setMeterProvider(SdkMeterProvider.builder().registerMetricReader(metricReader).build())
-                .setLoggerProvider(
-                    SdkLoggerProvider.builder()
+                .setMeterProvider(SdkMeterProvider.builder()
+                        .registerMetricReader(metricReader)
+                        .build())
+                .setLoggerProvider(SdkLoggerProvider.builder()
                         .addLogRecordProcessor(SimpleLogRecordProcessor.create(testLogRecordExporter))
                         .build())
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))

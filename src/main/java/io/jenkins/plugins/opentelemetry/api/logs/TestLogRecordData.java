@@ -13,7 +13,6 @@ import io.opentelemetry.sdk.common.InstrumentationScopeInfo;
 import io.opentelemetry.sdk.logs.data.Body;
 import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.resources.Resource;
-
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.concurrent.Immutable;
@@ -30,16 +29,23 @@ import javax.annotation.concurrent.Immutable;
 @AutoValue
 public abstract class TestLogRecordData implements LogRecordData {
     public static Builder builder() {
-        return (new AutoValue_TestLogRecordData.Builder()).setResource(Resource.empty()).setInstrumentationScopeInfo(InstrumentationScopeInfo.empty()).setTimestamp(0L, TimeUnit.NANOSECONDS).setObservedTimestamp(0L, TimeUnit.NANOSECONDS).setSpanContext(SpanContext.getInvalid()).setSeverity(Severity.UNDEFINED_SEVERITY_NUMBER).setBody("").setAttributes(Attributes.empty()).setTotalAttributeCount(0);
+        return (new AutoValue_TestLogRecordData.Builder())
+                .setResource(Resource.empty())
+                .setInstrumentationScopeInfo(InstrumentationScopeInfo.empty())
+                .setTimestamp(0L, TimeUnit.NANOSECONDS)
+                .setObservedTimestamp(0L, TimeUnit.NANOSECONDS)
+                .setSpanContext(SpanContext.getInvalid())
+                .setSeverity(Severity.UNDEFINED_SEVERITY_NUMBER)
+                .setBody("")
+                .setAttributes(Attributes.empty())
+                .setTotalAttributeCount(0);
     }
 
-    TestLogRecordData() {
-    }
+    TestLogRecordData() {}
 
     @com.google.auto.value.AutoValue.Builder
     public abstract static class Builder {
-        public Builder() {
-        }
+        public Builder() {}
 
         abstract TestLogRecordData autoBuild();
 
@@ -52,7 +58,8 @@ public abstract class TestLogRecordData implements LogRecordData {
         public abstract Builder setInstrumentationScopeInfo(InstrumentationScopeInfo var1);
 
         public Builder setTimestamp(Instant instant) {
-            return this.setTimestampEpochNanos(TimeUnit.SECONDS.toNanos(instant.getEpochSecond()) + (long) instant.getNano());
+            return this.setTimestampEpochNanos(
+                    TimeUnit.SECONDS.toNanos(instant.getEpochSecond()) + (long) instant.getNano());
         }
 
         public Builder setTimestamp(long timestamp, TimeUnit unit) {
@@ -62,7 +69,8 @@ public abstract class TestLogRecordData implements LogRecordData {
         abstract Builder setTimestampEpochNanos(long var1);
 
         public Builder setObservedTimestamp(Instant instant) {
-            return this.setObservedTimestampEpochNanos(TimeUnit.SECONDS.toNanos(instant.getEpochSecond()) + (long) instant.getNano());
+            return this.setObservedTimestampEpochNanos(
+                    TimeUnit.SECONDS.toNanos(instant.getEpochSecond()) + (long) instant.getNano());
         }
 
         public Builder setObservedTimestamp(long timestamp, TimeUnit unit) {

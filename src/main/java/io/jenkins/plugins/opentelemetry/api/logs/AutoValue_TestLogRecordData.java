@@ -6,7 +6,6 @@ import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.sdk.common.InstrumentationScopeInfo;
 import io.opentelemetry.sdk.logs.data.Body;
 import io.opentelemetry.sdk.resources.Resource;
-
 import javax.annotation.Nullable;
 import javax.annotation.processing.Generated;
 
@@ -149,7 +148,9 @@ final class AutoValue_TestLogRecordData extends TestLogRecordData {
                     && this.observedTimestampEpochNanos == that.getObservedTimestampEpochNanos()
                     && this.spanContext.equals(that.getSpanContext())
                     && this.severity.equals(that.getSeverity())
-                    && (this.severityText == null ? that.getSeverityText() == null : this.severityText.equals(that.getSeverityText()))
+                    && (this.severityText == null
+                            ? that.getSeverityText() == null
+                            : this.severityText.equals(that.getSeverityText()))
                     && this.body.equals(that.getBody())
                     && this.attributes.equals(that.getAttributes())
                     && this.totalAttributeCount == that.getTotalAttributeCount();
@@ -196,8 +197,7 @@ final class AutoValue_TestLogRecordData extends TestLogRecordData {
         private int totalAttributeCount;
         private byte set$0;
 
-        Builder() {
-        }
+        Builder() {}
 
         @Override
         public TestLogRecordData.Builder setResource(Resource resource) {
@@ -209,7 +209,8 @@ final class AutoValue_TestLogRecordData extends TestLogRecordData {
         }
 
         @Override
-        public TestLogRecordData.Builder setInstrumentationScopeInfo(InstrumentationScopeInfo instrumentationScopeInfo) {
+        public TestLogRecordData.Builder setInstrumentationScopeInfo(
+                InstrumentationScopeInfo instrumentationScopeInfo) {
             if (instrumentationScopeInfo == null) {
                 throw new NullPointerException("Null instrumentationScopeInfo");
             }
@@ -332,5 +333,4 @@ final class AutoValue_TestLogRecordData extends TestLogRecordData {
                     this.totalAttributeCount);
         }
     }
-
 }
