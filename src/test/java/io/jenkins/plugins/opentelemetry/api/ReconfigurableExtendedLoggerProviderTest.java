@@ -7,6 +7,7 @@ package io.jenkins.plugins.opentelemetry.api;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import io.opentelemetry.api.incubator.logs.ExtendedLogRecordBuilder;
 import io.opentelemetry.api.incubator.logs.ExtendedLogger;
 import io.opentelemetry.api.logs.LogRecordBuilder;
@@ -14,7 +15,6 @@ import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.logs.LoggerBuilder;
 import io.opentelemetry.api.logs.LoggerProvider;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.annotation.Nullable;
 import org.junit.jupiter.api.Test;
 
 class ReconfigurableExtendedLoggerProviderTest {

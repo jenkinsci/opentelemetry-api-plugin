@@ -7,6 +7,7 @@ package io.jenkins.plugins.opentelemetry.api;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import io.opentelemetry.api.incubator.trace.ExtendedSpanBuilder;
 import io.opentelemetry.api.incubator.trace.ExtendedTracer;
 import io.opentelemetry.api.trace.SpanBuilder;
@@ -14,7 +15,6 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.TracerBuilder;
 import io.opentelemetry.api.trace.TracerProvider;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.annotation.Nullable;
 import org.junit.jupiter.api.Test;
 
 class ReconfigurableExtendedTracerProviderTest {
