@@ -5,16 +5,16 @@
 
 package io.jenkins.plugins.opentelemetry.api;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Objects;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * <a href="https://opentelemetry.io/docs/concepts/instrumentation-scope/">OpenTelemetry instrumentation scope</a>,
  * data structured used by the {@link ReconfigurableOpenTelemetry} implementation
  */
 class InstrumentationScope {
-    @Nonnull
+    @NonNull
     final String instrumentationScopeName;
 
     @Nullable
@@ -30,7 +30,7 @@ class InstrumentationScope {
         this.instrumentationScopeVersion = instrumentationScopeVersion;
     }
 
-    public InstrumentationScope(@Nonnull String instrumentationScopeName) {
+    public InstrumentationScope(@NonNull String instrumentationScopeName) {
         this.instrumentationScopeName = instrumentationScopeName;
         this.schemaUrl = null;
         this.instrumentationScopeVersion = null;

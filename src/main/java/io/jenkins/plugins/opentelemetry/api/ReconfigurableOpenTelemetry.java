@@ -7,6 +7,7 @@ package io.jenkins.plugins.opentelemetry.api;
 
 import com.google.common.base.Function;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.OverrideMustInvoke;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.ExtensionPoint;
@@ -38,7 +39,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.OverridingMethodsMustInvokeSuper;
 import javax.annotation.PreDestroy;
 
 /**
@@ -317,7 +317,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
         return logRecordExporter;
     }
 
-    @OverridingMethodsMustInvokeSuper
+    @OverrideMustInvoke
     protected void postOpenTelemetrySdkConfiguration() {
         ExtensionList.lookup(OpenTelemetryLifecycleListener.class).stream()
                 .sorted()

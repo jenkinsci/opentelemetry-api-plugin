@@ -6,6 +6,7 @@
 package io.jenkins.plugins.opentelemetry.api;
 
 import com.google.common.annotations.VisibleForTesting;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import io.opentelemetry.api.incubator.trace.ExtendedSpanBuilder;
 import io.opentelemetry.api.incubator.trace.ExtendedTracer;
 import io.opentelemetry.api.trace.Tracer;
@@ -17,7 +18,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import javax.annotation.Nonnull;
 
 /**
  * <p>
@@ -184,7 +184,7 @@ class ReconfigurableTracerProvider implements TracerProvider {
         }
 
         @Override
-        public ExtendedSpanBuilder spanBuilder(@Nonnull String spanName) {
+        public ExtendedSpanBuilder spanBuilder(@NonNull String spanName) {
             lock.readLock().lock();
             try {
                 return delegate.spanBuilder(spanName);
