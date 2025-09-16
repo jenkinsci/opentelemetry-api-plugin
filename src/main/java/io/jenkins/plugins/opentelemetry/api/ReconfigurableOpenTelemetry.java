@@ -40,6 +40,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.OverridingMethodsMustInvokeSuper;
 import javax.annotation.PreDestroy;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * <p>
@@ -134,10 +135,22 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             Resource openTelemetryResource,
             boolean disableShutdownHook) {
 
-        if (openTelemetryProperties.containsKey("otel.exporter.otlp.endpoint")
-                || openTelemetryProperties.containsKey("otel.traces.exporter")
-                || openTelemetryProperties.containsKey("otel.metrics.exporter")
-                || openTelemetryProperties.containsKey("otel.logs.exporter")) {
+        // Configure real OTel SDK if one of the following config is passed,
+        // otherwise setup as no-op:
+        // 1. `otel.exporter.otlp.endpoint` is defined
+        //    `otel.[traces,logs,metrics].exporter` are `otlp` by default if they are not defined.
+        // 2. `otel.exporter.otlp.endpoint` not defined but exporters are defined and they are not `otlp`
+        var endpoint = openTelemetryProperties.get("otel.exporter.otlp.endpoint");
+        if (StringUtils.isBlank(endpoint)) {
+            endpoint = openTelemetryProperties.get("otel.exporter.otlp.traces.endpoint");
+        }
+        var tracesExporter = openTelemetryProperties.get("otel.traces.exporter");
+        var logsExporter = openTelemetryProperties.get("otel.logs.exporter");
+        var metricsExporter = openTelemetryProperties.get("otel.metrics.exporter");
+        if (StringUtils.isNotBlank(endpoint)
+                || (StringUtils.isNotBlank(tracesExporter) && !tracesExporter.equalsIgnoreCase("otlp"))
+                || (StringUtils.isNotBlank(logsExporter) && !logsExporter.equalsIgnoreCase("otlp"))
+                || (StringUtils.isNotBlank(metricsExporter) && !metricsExporter.equalsIgnoreCase("otlp"))) {
 
             logger.log(Level.FINE, "initializeOtlp");
 
