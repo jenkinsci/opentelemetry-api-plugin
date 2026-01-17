@@ -10,6 +10,13 @@ updates:
       otel-dependencies:
         patterns:
             - "io.opentelemetry*"
+    ignore:
+        - dependency-name: "io.opentelemetry*"
+          versions:
+            - "*-alpha*"
+            - "*-beta*"
+            - "*-RC*"
+            - "*-rc*"
   - package-ecosystem: github-actions
     directory: /
     schedule:
