@@ -41,7 +41,7 @@
     <opentelemetry-instrumentation.version>2.15.0</opentelemetry-instrumentation.version>
     <opentelemetry-semconv.version>1.32.0</opentelemetry-semconv.version>
 
-    <auto-value.version>1.11.0</auto-value.version>
+    <auto-value.version>1.11.1</auto-value.version>
     <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
     <jenkins.baseline>2.504</jenkins.baseline>
     <jenkins.version>${jenkins.baseline}.1</jenkins.version>
