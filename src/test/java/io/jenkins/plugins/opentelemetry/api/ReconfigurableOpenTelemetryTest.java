@@ -1,6 +1,9 @@
 package io.jenkins.plugins.opentelemetry.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
 import io.opentelemetry.sdk.resources.Resource;
@@ -50,9 +53,7 @@ class ReconfigurableOpenTelemetryTest {
             reconfigurableOpenTelemetry.configure(otelConfig, otelResource, true);
 
             // verify
-            assertEquals(
-                    Boolean.TRUE,
-                    reconfigurableOpenTelemetry.getConfig().getBoolean("otel.instrumentation.jdbc.enabled"));
+            assertTrue(reconfigurableOpenTelemetry.getConfig().getBoolean("otel.instrumentation.jdbc.enabled"));
             assertEquals(
                     "jenkins-456",
                     reconfigurableOpenTelemetry.getResource().getAttribute(ServiceAttributes.SERVICE_NAME));
@@ -74,9 +75,7 @@ class ReconfigurableOpenTelemetryTest {
             reconfigurableOpenTelemetry.configure(otelConfig, otelResource, true);
 
             // verify
-            assertEquals(
-                    Boolean.TRUE,
-                    reconfigurableOpenTelemetry.getConfig().getBoolean("otel.instrumentation.jdbc.enabled"));
+            assertTrue(reconfigurableOpenTelemetry.getConfig().getBoolean("otel.instrumentation.jdbc.enabled"));
             assertEquals(
                     "jenkins-123",
                     reconfigurableOpenTelemetry.getResource().getAttribute(ServiceAttributes.SERVICE_NAME));
@@ -100,9 +99,92 @@ class ReconfigurableOpenTelemetryTest {
             reconfigurableOpenTelemetry.configure(otelConfig, otelResource, true);
 
             // verify
+            assertFalse(reconfigurableOpenTelemetry.getConfig().getBoolean("otel.instrumentation.jdbc.enabled"));
             assertEquals(
-                    Boolean.FALSE,
-                    reconfigurableOpenTelemetry.getConfig().getBoolean("otel.instrumentation.jdbc.enabled"));
+                    "jenkins-123",
+                    reconfigurableOpenTelemetry.getResource().getAttribute(ServiceAttributes.SERVICE_NAME));
+        } finally {
+            System.clearProperty("otel.instrumentation.jdbc.enabled");
+        }
+    }
+
+    @Test
+    void test_configuration_without_endpoint() {
+        try {
+            Map<String, String> otelConfig = new HashMap<>();
+            otelConfig.put("otel.instrumentation.jdbc.enabled", "true");
+
+            Resource otelResource = Resource.builder()
+                    .put(ServiceAttributes.SERVICE_NAME, "jenkins-123")
+                    .build();
+            reconfigurableOpenTelemetry.configure(otelConfig, otelResource, true);
+
+            // verify
+            assertNull(reconfigurableOpenTelemetry.getConfig().getBoolean("otel.instrumentation.jdbc.enabled"));
+            assertNull(reconfigurableOpenTelemetry.getResource().getAttribute(ServiceAttributes.SERVICE_NAME));
+        } finally {
+            System.clearProperty("otel.instrumentation.jdbc.enabled");
+        }
+    }
+
+    @Test
+    void test_configuration_traces_without_endpoint_and_no_otlp_exporter() {
+        try {
+            Map<String, String> otelConfig = new HashMap<>();
+            otelConfig.put("otel.instrumentation.jdbc.enabled", "true");
+            otelConfig.put("otel.traces.exporter", "console");
+
+            Resource otelResource = Resource.builder()
+                    .put(ServiceAttributes.SERVICE_NAME, "jenkins-123")
+                    .build();
+            reconfigurableOpenTelemetry.configure(otelConfig, otelResource, true);
+
+            // verify
+            assertTrue(reconfigurableOpenTelemetry.getConfig().getBoolean("otel.instrumentation.jdbc.enabled"));
+            assertEquals(
+                    "jenkins-123",
+                    reconfigurableOpenTelemetry.getResource().getAttribute(ServiceAttributes.SERVICE_NAME));
+        } finally {
+            System.clearProperty("otel.instrumentation.jdbc.enabled");
+        }
+    }
+
+    @Test
+    void test_configuration_logs_without_endpoint_and_no_otlp_exporter() {
+        try {
+            Map<String, String> otelConfig = new HashMap<>();
+            otelConfig.put("otel.instrumentation.jdbc.enabled", "true");
+            otelConfig.put("otel.logs.exporter", "console");
+
+            Resource otelResource = Resource.builder()
+                    .put(ServiceAttributes.SERVICE_NAME, "jenkins-123")
+                    .build();
+            reconfigurableOpenTelemetry.configure(otelConfig, otelResource, true);
+
+            // verify
+            assertTrue(reconfigurableOpenTelemetry.getConfig().getBoolean("otel.instrumentation.jdbc.enabled"));
+            assertEquals(
+                    "jenkins-123",
+                    reconfigurableOpenTelemetry.getResource().getAttribute(ServiceAttributes.SERVICE_NAME));
+        } finally {
+            System.clearProperty("otel.instrumentation.jdbc.enabled");
+        }
+    }
+
+    @Test
+    void test_configuration_metrics_without_endpoint_and_no_otlp_exporter() {
+        try {
+            Map<String, String> otelConfig = new HashMap<>();
+            otelConfig.put("otel.instrumentation.jdbc.enabled", "true");
+            otelConfig.put("otel.metrics.exporter", "console");
+
+            Resource otelResource = Resource.builder()
+                    .put(ServiceAttributes.SERVICE_NAME, "jenkins-123")
+                    .build();
+            reconfigurableOpenTelemetry.configure(otelConfig, otelResource, true);
+
+            // verify
+            assertTrue(reconfigurableOpenTelemetry.getConfig().getBoolean("otel.instrumentation.jdbc.enabled"));
             assertEquals(
                     "jenkins-123",
                     reconfigurableOpenTelemetry.getResource().getAttribute(ServiceAttributes.SERVICE_NAME));
