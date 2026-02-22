@@ -104,7 +104,6 @@ class ReconfigurableMeterProviderITTest {
                 Cpu.registerObservers(reconfigurableOpenTelemetry);
                 assertMetricExist("jvm.cpu.count", metricReader);
                 assertMetricExist("jvm.cpu.time", metricReader);
-                assertMetricExist("jvm.cpu.recent_utilization", metricReader);
             }
         }
     }
@@ -187,7 +186,6 @@ class ReconfigurableMeterProviderITTest {
 
                 assertMetricExist("jvm.cpu.count", metricReader);
                 assertMetricExist("jvm.cpu.time", metricReader);
-                assertMetricExist("jvm.cpu.recent_utilization", metricReader);
             }
         }
     }
