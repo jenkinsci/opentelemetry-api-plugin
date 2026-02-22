@@ -7,6 +7,7 @@ package io.jenkins.plugins.opentelemetry.api;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.LongUpDownCounter;
 import io.opentelemetry.api.metrics.Meter;
@@ -26,12 +27,19 @@ import io.opentelemetry.sdk.testing.exporter.InMemoryMetricReader;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 /**
  * https://github.com/open-telemetry/opentelemetry-java-instrumentation/blob/main/testing-common/src/main/java/io/opentelemetry/instrumentation/testing/LibraryTestRunner.java#L87
  */
 class ReconfigurableMeterProviderITTest {
+
+    @AfterEach
+    void tearDown() {
+        // Reset GlobalOpenTelemetry between tests to avoid "GlobalOpenTelemetry.set has already been called" errors
+        GlobalOpenTelemetry.resetForTest();
+    }
 
     @Test
     void testPlainOpenTelemetrySdk() {
