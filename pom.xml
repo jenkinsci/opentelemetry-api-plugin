@@ -133,14 +133,14 @@
           <artifactId>okio</artifactId>
         </exclusion>
         <exclusion>
-          <!-- we get kotlin-stdlib from io.jenkins.plugins:okhttp-api -->
-          <groupId>org.jetbrains.kotlin</groupId>
-          <artifactId>kotlin-stdlib</artifactId>
-        </exclusion>
-        <exclusion>
           <!-- we get okio-jvm from io.jenkins.plugins:okhttp-api -->
           <groupId>com.squareup.okio</groupId>
           <artifactId>okio-jvm</artifactId>
+        </exclusion>
+        <exclusion>
+          <!-- we get kotlin-stdlib from io.jenkins.plugins:okhttp-api -->
+          <groupId>org.jetbrains.kotlin</groupId>
+          <artifactId>kotlin-stdlib</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
