@@ -28,6 +28,7 @@ import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
+import io.opentelemetry.sdk.metrics.export.MetricReader;
 import io.opentelemetry.sdk.resources.Resource;
 import java.io.Closeable;
 import java.util.Collection;
@@ -66,6 +67,7 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
     ConfigProperties config = ConfigPropertiesUtils.emptyConfig();
     OpenTelemetry openTelemetryImpl = OpenTelemetry.noop();
     LogRecordExporter logRecordExporter = NoopLogRecordExporter.getInstance();
+    MetricReader metricReader;
     Thread shutdownHook;
     final ReconfigurableMeterProvider meterProviderImpl = new ReconfigurableMeterProvider();
     final ReconfigurableTracerProvider traceProviderImpl = new ReconfigurableTracerProvider();
@@ -187,6 +189,11 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
                         // keep a reference to the computed LogRecordExporter for future use in the plugin
                         this.logRecordExporter = logRecordExporter;
                         return logRecordExporter;
+                    })
+                    .addMetricReaderCustomizer((metricReader, configProperties) -> {
+                        // keep a reference to the computed MetricReader for future use in the plugin
+                        this.metricReader = metricReader;
+                        return metricReader;
                     })
                     .disableShutdownHook()
                     .build()
@@ -324,6 +331,13 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
      */
     public LogRecordExporter getLogRecordExporter() {
         return logRecordExporter;
+    }
+
+    /**
+     * For testing and troubleshooting purpose
+     */
+    public MetricReader getMetricReader() {
+        return metricReader;
     }
 
     @OverridingMethodsMustInvokeSuper
