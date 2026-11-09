@@ -12,6 +12,7 @@ import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 import hudson.init.InitMilestone;
 import hudson.init.Initializer;
+import io.jenkins.plugins.opentelemetry.api.instrumentation.resource.JenkinsResourceProvider;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.logs.LoggerProvider;
@@ -21,10 +22,13 @@ import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.TracerBuilder;
 import io.opentelemetry.api.trace.TracerProvider;
+import io.opentelemetry.common.ComponentLoader;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
+import io.opentelemetry.sdk.autoconfigure.ResourceConfiguration;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
@@ -55,6 +59,11 @@ import javax.annotation.PreDestroy;
  * Jenkins components interested in being notified after the OpenTelemetry configuration changes can be marked as @{@link Extension}
  * and implement {@link OpenTelemetryLifecycleListener}.
  * </p>
+ * <p>
+ * With {@value #USE_GLOBAL_OPENTELEMETRY}{@code =true}, and when another component such as the OpenTelemetry Java agent
+ * has registered its {@link OpenTelemetry} in {@link GlobalOpenTelemetry}, this class uses that instance instead of
+ * building a second OpenTelemetry SDK.
+ * </p>
  */
 public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenTelemetry, Closeable, ExtensionPoint {
 
@@ -62,6 +71,22 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
     private static final ReconfigurableOpenTelemetry INSTANCE = new ReconfigurableOpenTelemetry();
     private static final AtomicInteger GET_INVOCATION_COUNT = new AtomicInteger(0);
     private static final String NONE = "none";
+
+    /**
+     * When {@code true}, use the {@link OpenTelemetry} instance that another component, such as the OpenTelemetry Java
+     * agent, registered in {@link GlobalOpenTelemetry}, instead of building a second OpenTelemetry SDK. The Jenkins
+     * spans, metrics and logs then go through the same SDK as the agent's instrumentation, so the agent's spans (for
+     * example HTTP client calls) are children of the Jenkins spans. Exporters, endpoints, resource and sampler then come
+     * from that component, not from the properties passed to {@link #configure(Map, Resource, boolean)}.
+     * <p>
+     * Off by default. Set it in the configuration properties, as a system property, or as the environment variable
+     * {@code OTEL_INSTRUMENTATION_JENKINS_USE_GLOBAL_OPENTELEMETRY}. With the OpenTelemetry Java agent, the agent's
+     * {@code opentelemetry-api} instrumentation must be enabled: it is enabled by default, and needs
+     * {@code otel.instrumentation.opentelemetry-api.enabled=true} when
+     * {@code otel.instrumentation.common.default-enabled=false}.
+     * </p>
+     */
+    public static final String USE_GLOBAL_OPENTELEMETRY = "otel.instrumentation.jenkins.use-global-opentelemetry";
 
     Resource resource = Resource.empty();
     ConfigProperties config = ConfigPropertiesUtils.emptyConfig();
@@ -136,6 +161,26 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             @NonNull Map<String, String> openTelemetryProperties,
             Resource openTelemetryResource,
             boolean disableShutdownHook) {
+
+        // Same precedence as the SDK built below: the passed properties override system properties, which override
+        // environment variables
+        ConfigProperties requestedConfig = DefaultConfigProperties.create(
+                        Collections.emptyMap(),
+                        ComponentLoader.forClassLoader(ReconfigurableOpenTelemetry.class.getClassLoader()))
+                .withOverrides(openTelemetryProperties);
+        if (requestedConfig.getBoolean(USE_GLOBAL_OPENTELEMETRY, false)) {
+            Optional<OpenTelemetry> globalOpenTelemetry = getGlobalOpenTelemetryOfAnotherComponent();
+            if (globalOpenTelemetry.isPresent()) {
+                configureWithGlobalOpenTelemetry(globalOpenTelemetry.get(), requestedConfig, openTelemetryResource);
+                return;
+            }
+            logger.log(
+                    Level.WARNING,
+                    () -> USE_GLOBAL_OPENTELEMETRY + "=true, but no other component registered an OpenTelemetry "
+                            + "instance in GlobalOpenTelemetry. With the OpenTelemetry Java agent, enable its "
+                            + "opentelemetry-api instrumentation (otel.instrumentation.opentelemetry-api.enabled=true). "
+                            + "Configuring the OpenTelemetry SDK of the plugin instead.");
+        }
 
         // Configure OTel SDK only if an exporter is configured or the endpoint is set.
         var endpoint = openTelemetryProperties.getOrDefault("otel.exporter.otlp.endpoint", NONE);
@@ -231,6 +276,49 @@ public class ReconfigurableOpenTelemetry implements ExtendedOpenTelemetry, OpenT
             logger.log(Level.FINE, () -> "OpenTelemetry configured as NoOp");
         }
 
+        postOpenTelemetrySdkConfiguration();
+    }
+
+    /**
+     * @return the {@link OpenTelemetry} instance in {@link GlobalOpenTelemetry} if another component registered it,
+     * empty if {@link GlobalOpenTelemetry} holds this instance
+     */
+    private Optional<OpenTelemetry> getGlobalOpenTelemetryOfAnotherComponent() {
+        // The constructor calls GlobalOpenTelemetry.set(this). GlobalOpenTelemetry holds another instance if another
+        // component set it first, or if it ignores set() as the OpenTelemetry Java agent does. GlobalOpenTelemetry
+        // wraps the instance it holds, so compare the tracer providers. A no-op instance does not count: it is also
+        // what GlobalOpenTelemetry returns, and keeps, when nothing is set, for example after close().
+        TracerProvider globalTracerProvider = GlobalOpenTelemetry.getTracerProvider();
+        if (globalTracerProvider == this.traceProviderImpl || globalTracerProvider == TracerProvider.noop()) {
+            return Optional.empty();
+        }
+        return Optional.of(GlobalOpenTelemetry.get());
+    }
+
+    private void configureWithGlobalOpenTelemetry(
+            OpenTelemetry globalOpenTelemetry, ConfigProperties requestedConfig, Resource openTelemetryResource) {
+        setOpenTelemetryImpl(globalOpenTelemetry);
+        // The resource and the config as this plugin knows them. The resource that is exported is the one of the
+        // component that owns the SDK, which does not share its SDK objects.
+        this.config = requestedConfig;
+        this.resource = Resource.builder()
+                .putAll(new JenkinsResourceProvider().createResource(requestedConfig))
+                .putAll(ResourceConfiguration.createEnvironmentResource(requestedConfig))
+                .putAll(openTelemetryResource)
+                .build();
+        this.logRecordExporter = NoopLogRecordExporter.getInstance();
+        this.metricReader = null;
+        if (shutdownHook != null) {
+            // Nothing of this plugin to flush: the component that owns the SDK shuts it down
+            Runtime.getRuntime().removeShutdownHook(shutdownHook);
+            shutdownHook = null;
+        }
+        logger.log(
+                Level.INFO,
+                () -> "OpenTelemetry configured with the GlobalOpenTelemetry instance of another component ("
+                        + globalOpenTelemetry.getClass().getName() + "), " + USE_GLOBAL_OPENTELEMETRY
+                        + "=true. Its own settings define exporters, endpoints, resource and sampler. "
+                        + ConfigPropertiesUtils.prettyPrintOtelSdkConfig(this.config, this.resource));
         postOpenTelemetrySdkConfiguration();
     }
 
